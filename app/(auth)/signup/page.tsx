@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Mail, CheckCircle2 } from 'lucide-react';
+import Cookies from 'js-cookie';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -53,6 +54,12 @@ export default function SignupPage() {
     
     try {
       const response = await api.post('/auth/verify-otp', { email, otp });
+      
+      // Set token in local cookie for cross-domain support
+      if (response.data.token) {
+        Cookies.set('access_token', response.data.token, { expires: 1, path: '/' });
+      }
+      
       login(response.data.user);
       // Redirect to onboarding after successful signup
       router.push('/onboarding');

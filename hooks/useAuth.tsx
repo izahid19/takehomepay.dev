@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import api from '@/lib/axios';
 import { useRouter } from 'next/navigation';
+import Cookies from 'js-cookie';
 
 interface User {
   id: string;
@@ -49,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       await api.post('/auth/logout');
+      Cookies.remove('access_token');
       setUser(null);
       router.push('/login');
     } catch (error) {

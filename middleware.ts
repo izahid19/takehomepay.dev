@@ -8,7 +8,7 @@ export function middleware(request: NextRequest) {
   // Protect /dashboard and /admin routes
   if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin')) {
     if (!token) {
-      return NextResponse.redirect(new URL('/login', request.url));
+      return NextResponse.redirect(new URL(`/login?redirect=${pathname}`, request.url));
     }
   }
 
