@@ -28,22 +28,7 @@ export default function LoginPage() {
     try {
       const response = await api.post('/auth/login', { email, password });
       login(response.data.user);
-      
-      // Check if user needs onboarding
-      try {
-        const profileResponse = await api.get('/profile');
-        const profileCompletion = profileResponse.data.data?.professionalInfo?.profileCompletion || 0;
-        
-        // If profile is less than 50% complete, redirect to onboarding
-        if (profileCompletion < 50) {
-          router.push('/onboarding');
-        } else {
-          router.push('/dashboard');
-        }
-      } catch (err) {
-        // If profile doesn't exist, redirect to onboarding
-        router.push('/onboarding');
-      }
+      router.push('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {

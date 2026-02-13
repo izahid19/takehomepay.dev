@@ -44,7 +44,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = (userData: any) => {
     setUser(userData);
-    router.push('/dashboard');
   };
 
   const logout = async () => {
