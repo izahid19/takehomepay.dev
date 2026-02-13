@@ -57,14 +57,33 @@ const config: Config = {
   				'5': 'hsl(var(--chart-5))'
   			}
   		},
-  		borderRadius: {
-  			lg: 'var(--radius)',
-  			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
-  		}
-  	}
-  },
-  plugins: [require("tailwindcss-animate")],
+    		borderRadius: {
+    			lg: 'var(--radius)',
+    			md: 'calc(var(--radius) - 2px)',
+    			sm: 'calc(var(--radius) - 4px)'
+    		},
+    		keyframes: {
+    			'shimmer-slide': {
+    				to: {
+    					transform: 'translate(calc(100cqw - 100%), 0)'
+    				}
+    			},
+    			'spin-around': {
+    				from: {
+    					transform: 'translateZ(0) rotate(0)'
+    				},
+    				to: {
+    					transform: 'translateZ(0) rotate(360deg)'
+    				}
+    			}
+    		},
+    		animation: {
+    			'shimmer-slide': 'shimmer-slide var(--speed) ease-in-out infinite alternate',
+    			'spin-around': 'spin-around calc(var(--speed) * 2) infinite linear'
+    		}
+    	}
+    },
+  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
 };
 
 export default config;

@@ -1,0 +1,9 @@
+export { HeroSection } from "./HeroSection";
+export { ProblemSection } from "./ProblemSection";
+export { SolutionSection } from "./SolutionSection";
+export { FeatureGridSection } from "./FeatureGridSection";
+export { TransformationSection } from "./TransformationSection";
+export { HowItWorksSection } from "./HowItWorksSection";
+export { IncomeCalculatorSection } from "./IncomeCalculatorSection";
+export { TestimonialSection } from "./TestimonialSection";
+export { FinalCtaSection } from "./FinalCtaSection";

@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { CURRENCIES, type CurrencyCode } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface CurrencySelectProps {
   value: CurrencyCode;
@@ -20,12 +21,14 @@ export function CurrencySelect({ value, onChange, label = "Currency" }: Currency
   const selectedCurrency = CURRENCIES.find((c) => c.code === value);
 
   return (
-    <div className="space-y-2">
-      <Label htmlFor="currency" className="text-muted-foreground">
-        {label}
-      </Label>
+    <div className={cn(label && "space-y-2")}>
+      {label && (
+        <Label htmlFor="currency" className="text-muted-foreground">
+          {label}
+        </Label>
+      )}
       <Select value={value} onValueChange={(v) => onChange(v as CurrencyCode)}>
-        <SelectTrigger id="currency" className="text-lg font-medium h-12">
+        <SelectTrigger id="currency" className="text-lg font-medium h-12 bg-card/60 border-border rounded-xl">
           <SelectValue placeholder="Select currency">
             {selectedCurrency && (
               <span className="flex items-center gap-2">
