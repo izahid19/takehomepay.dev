@@ -18,6 +18,7 @@ export default function ProfilePage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [initialValues, setInitialValues] = useState<{ formData: any; skillsInput: string } | null>(null);
 
   const [formData, setFormData] = useState({
     personalInfo: { firstName: '', lastName: '', phone: '' },
@@ -40,7 +41,7 @@ export default function ProfilePage() {
         if (response.data.data) {
           const profile = response.data.data;
           setProfileData(profile);
-          setFormData({
+          const initialData = {
             personalInfo: profile.personalInfo || { firstName: '', lastName: '', phone: '' },
             companyInfo: profile.companyInfo || { companyName: '', website: '' },
             professionalInfo: {
@@ -50,8 +51,12 @@ export default function ProfilePage() {
               skills: profile.professionalInfo?.skills || [],
               projects: profile.professionalInfo?.projects || []
             },
-          });
-          setSkillsInput(profile.professionalInfo?.skills?.join(', ') || '');
+          };
+          const initialSkills = profile.professionalInfo?.skills?.join(', ') || '';
+          
+          setFormData(initialData);
+          setSkillsInput(initialSkills);
+          setInitialValues({ formData: initialData, skillsInput: initialSkills });
         }
       } catch (err) {
         console.error('Failed to fetch profile', err);
@@ -75,7 +80,23 @@ export default function ProfilePage() {
         professionalInfo: { ...formData.professionalInfo, skills: skillsArray }
       };
       const response = await api.put('/profile', payload);
-      setProfileData(response.data.data);
+      const updatedProfile = response.data.data;
+      setProfileData(updatedProfile);
+      
+      const newInitialData = {
+        personalInfo: updatedProfile.personalInfo || { firstName: '', lastName: '', phone: '' },
+        companyInfo: updatedProfile.companyInfo || { companyName: '', website: '' },
+        professionalInfo: {
+          jobTitle: updatedProfile.professionalInfo?.jobTitle || '',
+          bio: updatedProfile.professionalInfo?.bio || '',
+          experience: updatedProfile.professionalInfo?.experience || '',
+          skills: updatedProfile.professionalInfo?.skills || [],
+          projects: updatedProfile.professionalInfo?.projects || []
+        },
+      };
+      const newInitialSkills = updatedProfile.professionalInfo?.skills?.join(', ') || '';
+      
+      setInitialValues({ formData: newInitialData, skillsInput: newInitialSkills });
       setSuccess(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
@@ -86,6 +107,11 @@ export default function ProfilePage() {
   };
 
   const profileCompletion = profileData?.professionalInfo?.profileCompletion || 0;
+
+  const hasChanges = initialValues ? (
+    JSON.stringify(formData) !== JSON.stringify(initialValues.formData) ||
+    skillsInput !== initialValues.skillsInput
+  ) : false;
 
   if (fetching) {
     return <div className="space-y-4 max-w-4xl mx-auto p-8">
@@ -369,10 +395,17 @@ export default function ProfilePage() {
           </Card>
 
           <div className="flex justify-end pt-4">
-            <Button type="submit" size="xl" disabled={loading} className="px-12 font-bold shadow-lg shadow-primary/20 relative group overflow-hidden">
+            <Button 
+              type="submit" 
+              size="xl" 
+              disabled={loading || !hasChanges} 
+              className="px-12 font-bold shadow-lg shadow-primary/20 relative group overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed disabled:grayscale"
+            >
               {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
               Save Changes
-              <div className="absolute inset-0 bg-gradient-to-r from-primary via-emerald-500 to-primary bg-[length:400%_100%] animate-shimmer opacity-0 group-hover:opacity-100 transition-opacity" />
+              {!loading && hasChanges && (
+                <div className="absolute inset-0 bg-gradient-to-r from-primary via-emerald-500 to-primary bg-[length:400%_100%] animate-shimmer opacity-0 group-hover:opacity-100 transition-opacity" />
+              )}
             </Button>
           </div>
         </div>

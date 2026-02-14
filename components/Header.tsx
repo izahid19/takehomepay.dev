@@ -17,7 +17,8 @@ import {
   Zap,
   Menu,
   X,
-  Calculator as CalcIcon
+  Calculator as CalcIcon,
+  LayoutDashboard
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -70,28 +71,74 @@ export function Header() {
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-1">
 
-            <Link
-              href="/pricing"
-              className={cn(
-                "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
-                pathname === "/pricing"
-                  ? "text-primary bg-primary/10"
-                  : "text-gray-300 hover:text-white hover:bg-zinc-800/80"
-              )}
-            >
-              Pricing
-            </Link>
-            <Link
-              href="/calculator"
-              className={cn(
-                "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
-                pathname === "/calculator"
-                  ? "text-primary bg-primary/10"
-                  : "text-gray-300 hover:text-white hover:bg-zinc-800/80"
-              )}
-            >
-              Calculator
-            </Link>
+            {user?.role !== 'admin' && (
+              <>
+                <Link
+                  href="/pricing"
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
+                    pathname === "/pricing"
+                      ? "text-primary bg-primary/10"
+                      : "text-gray-300 hover:text-white hover:bg-zinc-800/80"
+                  )}
+                >
+                  Pricing
+                </Link>
+                <Link
+                  href="/calculator"
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
+                    pathname === "/calculator"
+                      ? "text-primary bg-primary/10"
+                      : "text-gray-300 hover:text-white hover:bg-zinc-800/80"
+                  )}
+                >
+                  Calculator
+                </Link>
+              </>
+            )}
+            {user && (
+              <>
+                {user.role === 'admin' ? (
+                  <>
+                    <Link
+                      href="/dashboard"
+                      className={cn(
+                        "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
+                        pathname === "/dashboard"
+                          ? "text-primary bg-primary/10"
+                          : "text-gray-300 hover:text-white hover:bg-zinc-800/80"
+                      )}
+                    >
+                      Analytics
+                    </Link>
+                    <Link
+                      href="/dashboard/users"
+                      className={cn(
+                        "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
+                        pathname === "/dashboard/users"
+                          ? "text-primary bg-primary/10"
+                          : "text-gray-300 hover:text-white hover:bg-zinc-800/80"
+                      )}
+                    >
+                      Manage Users
+                    </Link>
+                  </>
+                ) : (
+                  <Link
+                    href="/dashboard"
+                    className={cn(
+                      "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
+                      pathname.startsWith("/dashboard")
+                        ? "text-primary bg-primary/10"
+                        : "text-gray-300 hover:text-white hover:bg-zinc-800/80"
+                    )}
+                  >
+                    Dashboard
+                  </Link>
+                )}
+              </>
+            )}
           </nav>
         </div>
 
@@ -112,7 +159,14 @@ export function Header() {
                   </div>
                   <div className="flex items-center gap-3 leading-none">
                      <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest w-12 text-right">Plan</span>
-                     <span className="text-[9px] font-black text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded-sm uppercase tracking-widest leading-none">{user.plan}</span>
+                     <span className={cn(
+                       "text-[9px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-widest leading-none",
+                       user.plan === 'pro' ? 'text-orange-500 bg-orange-500/10' : 
+                       user.plan === 'elite' ? 'text-blue-500 bg-blue-500/10' : 
+                       'text-emerald-400 bg-emerald-400/10'
+                     )}>
+                       {user.plan}
+                     </span>
                   </div>
                 </div>
                 <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary group-hover:bg-primary/30 transition-colors overflow-hidden">
@@ -132,10 +186,12 @@ export function Header() {
                      </div>
                    </div>
                    
-                   <Link href="/dashboard/proposals" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-zinc-900 hover:text-white transition-colors">
-                     <FileText size={16} className="text-primary" />
-                     My Proposals
-                   </Link>
+                   {user.role !== 'admin' && (
+                     <Link href="/dashboard/proposals" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-zinc-900 hover:text-white transition-colors">
+                       <FileText size={16} className="text-primary" />
+                       My Proposals
+                     </Link>
+                   )}
                    
                    <Link href="/dashboard/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-zinc-900 hover:text-white transition-colors">
                      <Settings size={16} className="text-primary" />
@@ -143,7 +199,7 @@ export function Header() {
                    </Link>
 
                    {user.role === 'admin' && (
-                     <Link href="/admin" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-zinc-900 hover:text-white transition-colors">
+                     <Link href="/dashboard/users" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-zinc-900 hover:text-white transition-colors">
                        <ShieldCheck size={16} className="text-amber-400" />
                        Admin Panel
                      </Link>
@@ -190,30 +246,34 @@ export function Header() {
           >
             <nav className="flex flex-col gap-2">
 
-              <Link
-                href="/pricing"
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all",
-                  pathname === "/pricing"
-                    ? "text-primary bg-primary/10"
-                    : "text-gray-300 hover:text-white hover:bg-zinc-900"
-                )}
-              >
-                <Zap size={18} />
-                Pricing
-              </Link>
-              <Link
-                href="/calculator"
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all",
-                  pathname === "/calculator"
-                    ? "text-primary bg-primary/10"
-                    : "text-gray-300 hover:text-white hover:bg-zinc-900"
-                )}
-              >
-                <CalcIcon className="h-4.5 w-4.5" />
-                Calculator
-              </Link>
+              {user?.role !== 'admin' && (
+                <>
+                  <Link
+                    href="/pricing"
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-xl transition-all",
+                      pathname === "/pricing"
+                        ? "text-primary bg-primary/10"
+                        : "text-gray-300 hover:text-white hover:bg-zinc-900"
+                    )}
+                  >
+                    <Zap size={18} />
+                    Pricing
+                  </Link>
+                  <Link
+                    href="/calculator"
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-xl transition-all",
+                      pathname === "/calculator"
+                        ? "text-primary bg-primary/10"
+                        : "text-gray-300 hover:text-white hover:bg-zinc-900"
+                    )}
+                  >
+                    <CalcIcon className="h-4.5 w-4.5" />
+                    Calculator
+                  </Link>
+                </>
+              )}
               
               {!user && (
                 <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-neutral-800">
@@ -227,13 +287,56 @@ export function Header() {
               )}
 
               {user && (
-                <button
-                  onClick={() => setShowLogoutModal(true)}
-                  className="flex items-center gap-3 px-4 py-3 mt-2 text-red-400 hover:bg-red-500/10 rounded-xl transition-all"
-                >
-                  <LogOut size={18} />
-                  Logout
-                </button>
+                <>
+                  {user.role === 'admin' ? (
+                    <>
+                      <Link
+                        href="/dashboard"
+                        className={cn(
+                          "flex items-center gap-3 px-4 py-3 rounded-xl transition-all",
+                          pathname === "/dashboard"
+                            ? "text-primary bg-primary/10"
+                            : "text-gray-300 hover:text-white hover:bg-zinc-900"
+                        )}
+                      >
+                        <LayoutDashboard size={18} />
+                        Analytics Overview
+                      </Link>
+                      <Link
+                        href="/dashboard/users"
+                        className={cn(
+                          "flex items-center gap-3 px-4 py-3 rounded-xl transition-all",
+                          pathname === "/dashboard/users"
+                            ? "text-primary bg-primary/10"
+                            : "text-gray-300 hover:text-white hover:bg-zinc-900"
+                        )}
+                      >
+                        <ShieldCheck size={18} />
+                        Manage Users
+                      </Link>
+                    </>
+                  ) : (
+                    <Link
+                      href="/dashboard"
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all",
+                        pathname === "/dashboard"
+                          ? "text-primary bg-primary/10"
+                          : "text-gray-300 hover:text-white hover:bg-zinc-900"
+                      )}
+                    >
+                      <LayoutDashboard size={18} />
+                      Dashboard
+                    </Link>
+                  )}
+                  <button
+                    onClick={() => setShowLogoutModal(true)}
+                    className="flex items-center gap-3 px-4 py-3 mt-2 text-red-400 hover:bg-red-500/10 rounded-xl transition-all w-full text-left"
+                  >
+                    <LogOut size={18} />
+                    Logout
+                  </button>
+                </>
               )}
             </nav>
           </div>

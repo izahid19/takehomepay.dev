@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import api from '@/lib/axios';
+import { toast } from 'react-toastify';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { FileText, PlusCircle, Trash2, ArrowRight, Sparkles, Clock, LayoutGrid, List, Search, AlertCircle } from 'lucide-react';
@@ -48,11 +49,11 @@ export default function ProposalsPage() {
       const response = await api.delete(`/proposals/${deleteId}`);
       if (response.status === 204 || response.data?.status === 'success') {
         setProposals((prev) => prev.filter((p: any) => p._id !== deleteId));
+        toast.success('Proposal deleted successfully');
         setDeleteId(null);
       }
     } catch (err: any) {
-      console.error('Delete failed:', err);
-      alert(`Failed to delete proposal: ${err.response?.data?.message || err.message}`);
+      toast.error(err.response?.data?.message || err.message || 'Failed to delete proposal');
     } finally {
       setIsDeleting(false);
     }

@@ -15,7 +15,7 @@ export function middleware(request: NextRequest) {
   // Prevent logged in users from visiting login/signup
   if (pathname === '/login' || pathname === '/signup') {
     if (token) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+      return NextResponse.redirect(new URL('/', request.url));
     }
   }
 

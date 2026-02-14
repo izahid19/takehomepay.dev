@@ -11,8 +11,10 @@ import { parseNumericInput } from "@/lib/validation";
 import { formatCurrency, CURRENCIES, type CurrencyCode } from "@/lib/utils";
 import { useExchangeRates, getRate } from "@/hooks/useExchangeRates";
 import { RefreshCw, ArrowRight } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export function Calculator() {
+  const { user } = useAuth();
   const cardRef = useRef<HTMLDivElement>(null);
   const inputsRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -27,10 +29,26 @@ export function Calculator() {
   const [platformFee, setPlatformFee] = useState<string>("20");
   const [tax, setTax] = useState<string>("25");
   
+  // Plan-based currency restrictions
+  const isFreePlan = !user || user.plan === 'free';
+  const allowedCurrencies: CurrencyCode[] | undefined = isFreePlan ? ["INR", "USD"] : undefined;
+
   // Currency for input (hourly rate)
   const [inputCurrency, setInputCurrency] = useState<CurrencyCode>("USD");
   // Currency for output (results display)
   const [outputCurrency, setOutputCurrency] = useState<CurrencyCode>("USD");
+
+  // Reset currency if it's no longer allowed
+  useEffect(() => {
+    if (isFreePlan) {
+      if (inputCurrency !== "INR" && inputCurrency !== "USD") {
+        setInputCurrency("USD");
+      }
+      if (outputCurrency !== "INR" && outputCurrency !== "USD") {
+        setOutputCurrency("USD");
+      }
+    }
+  }, [isFreePlan, inputCurrency, outputCurrency]);
 
   // Get currency symbol for input
   const inputCurrencySymbol = CURRENCIES.find(c => c.code === inputCurrency)?.symbol || "$";
@@ -146,6 +164,7 @@ export function Calculator() {
               value={inputCurrency} 
               onChange={setInputCurrency} 
               label="Input Currency"
+              allowedCodes={allowedCurrencies}
             />
           </div>
           <div className="hidden sm:flex items-center justify-center pb-2">
@@ -156,9 +175,16 @@ export function Calculator() {
               value={outputCurrency} 
               onChange={setOutputCurrency}
               label="Output Currency" 
+              allowedCodes={allowedCurrencies}
             />
           </div>
         </div>
+
+        {isFreePlan && (
+          <p className="text-[10px] text-center text-amber-500/80 font-bold uppercase tracking-widest animate-pulse">
+            ✨ Upgrade to Elite or Pro to unlock 40+ currencies
+          </p>
+        )}
 
         {/* Exchange Rate Info */}
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-secondary/30 rounded-lg py-2 px-4">

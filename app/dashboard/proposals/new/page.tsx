@@ -9,41 +9,227 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Sparkles, Wand2, DollarSign, ListTodo, Info, AlertTriangle } from 'lucide-react';
+import { Loader2, Sparkles, Wand2, DollarSign, ListTodo, Info, AlertTriangle, Lock } from 'lucide-react';
 import { CreditModal } from '@/components/CreditModal';
+import { RegenerateConfirmModal } from '@/components/RegenerateConfirmModal';
 import { ProfileCompletionBar } from '@/components/ProfileCompletionBar';
 import { MissingFieldsList, ProfileData } from '@/components/MissingFieldsList';
 import Link from 'next/link';
 import { ProposalMode, proposalModeLabels } from '@/types/proposal';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 
 import { CurrencySelect } from '@/components/CurrencySelect';
-import { CurrencyCode } from '@/lib/utils';
+import { CurrencyCode, CURRENCIES } from '@/lib/utils';
+
+const validationSchema = Yup.object({
+  title: Yup.string().trim().required('Please enter a project title.'),
+  description: Yup.string().trim().required('Please provide a project description.'),
+  clientName: Yup.string(),
+  budget: Yup.string(),
+  currency: Yup.string().when('budget', {
+    is: (val: string) => val && val.trim().length > 0,
+    then: (schema) => schema.required('Please choose currency'),
+  }),
+  deadline: Yup.string(),
+  instructions: Yup.string(),
+  length: Yup.string().oneOf(['short', 'medium', 'long']),
+  mode: Yup.string().required(),
+});
 
 export default function NewProposalPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showCreditModal, setShowCreditModal] = useState(false);
+  const [showRegenerateModal, setShowRegenerateModal] = useState(false);
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [initialRegenerationValues, setInitialRegenerationValues] = useState<any>(null);
   const [fetchingProfile, setFetchingProfile] = useState(true);
   const router = useRouter();
   const { user, refreshUser } = useAuth();
+  const isFreePlan = !user || user.plan === 'free';
+  const allowedCurrencies: CurrencyCode[] | undefined = isFreePlan ? ["INR", "USD"] : undefined;
 
-  const [formData, setFormData] = useState({
-    clientName: '',
-    title: '',
-    description: '',
-    length: 'medium',
-    mode: ProposalMode.DIRECT_CLIENT,
-    budget: '',
-    currency: 'USD' as CurrencyCode,
-    deadline: '',
-    instructions: '',
-    includeMilestones: false,
-    addStructure: true,
-    includeQuestions: false,
-    useCompetitiveEdge: false,
-    useCTA: false
+  const formik = useFormik({
+    initialValues: {
+      clientName: '',
+      title: '',
+      description: '',
+      length: 'medium',
+      mode: ProposalMode.DIRECT_CLIENT,
+      budget: '',
+      currency: '' as any,
+      deadline: '',
+      instructions: '',
+      includeMilestones: false,
+      addStructure: true,
+      includeQuestions: false,
+      useCompetitiveEdge: false,
+      useCTA: false
+    },
+    validationSchema,
+    onSubmit: async (values) => {
+      if (loading) return;
+      console.log('[NewProposal] Checking for duplicates...', { values, initialRegenerationValues });
+      
+      // 1. Session-based quick check (immediate regeneration)
+      if (initialRegenerationValues) {
+        const isIdentical = Object.keys(initialRegenerationValues).every(key => 
+          JSON.stringify(values[key as keyof typeof values]) === JSON.stringify(initialRegenerationValues[key])
+        );
+        
+        if (isIdentical) {
+          console.log('[NewProposal] Identical values detected (Session Check)');
+          setShowRegenerateModal(true);
+          return;
+        }
+      }
+
+      // 2. Backend-based definitive check
+      try {
+        setLoading(true);
+        const projectInput = {
+          clientName: (values.clientName || '').trim(),
+          title: (values.title || '').trim(),
+          description: (values.description || '').trim(),
+          length: values.length,
+          budget: `${values.currency} ${(values.budget || '').trim()}`.trim(),
+          deadline: (values.deadline || '').trim(),
+          instructions: (values.instructions || '').trim(),
+          includeMilestones: !!values.includeMilestones,
+          addStructure: !!values.addStructure,
+          includeQuestions: !!values.includeQuestions,
+          useCompetitiveEdge: !!values.useCompetitiveEdge,
+          useCTA: !!values.useCTA
+        };
+
+        const response = await api.post('/proposals/check-duplicate', {
+          mode: values.mode,
+          projectInput
+        });
+
+        if (response.data.data.isDuplicate) {
+          console.log('[NewProposal] Duplicate found on Backend');
+          setLoading(false);
+          setShowRegenerateModal(true);
+          return;
+        }
+      } catch (err) {
+        console.error('[NewProposal] Duplicate check failed', err);
+      } finally {
+        setLoading(false);
+      }
+
+      await executeGeneration(values);
+    },
   });
+
+  const executeGeneration = async (values: any) => {
+    if (user && user.credits <= 0) {
+      setShowCreditModal(true);
+      return;
+    }
+
+    setLoading(true);
+
+    // Store form data in sessionStorage for the generating page
+    const proposalData = {
+      mode: values.mode,
+      projectInput: {
+        clientName: values.clientName,
+        title: values.title,
+        description: values.description,
+        length: values.length,
+        budget: `${values.currency} ${values.budget}`,
+        deadline: values.deadline,
+        instructions: values.instructions,
+        includeMilestones: values.includeMilestones,
+        addStructure: values.addStructure,
+        includeQuestions: values.includeQuestions,
+        useCompetitiveEdge: values.useCompetitiveEdge,
+        useCTA: values.useCTA
+      }
+    };
+
+    sessionStorage.setItem('proposalFormData', JSON.stringify(proposalData));
+
+    // Immediately redirect to generating page
+    router.push('/dashboard/proposals/generating');
+  };
+
+  // Reset restricted fields for free plan
+  useEffect(() => {
+    if (isFreePlan) {
+      if (formik.values.currency && formik.values.currency !== 'USD' && formik.values.currency !== 'INR') {
+        formik.setFieldValue('currency', 'USD');
+      }
+      if (formik.values.mode !== ProposalMode.DIRECT_CLIENT) {
+        formik.setFieldValue('mode', ProposalMode.DIRECT_CLIENT);
+      }
+    }
+  }, [isFreePlan, formik.values.currency, formik.values.mode]);
+
+  // Pre-fill from session storage if coming from "Regenerate"
+  useEffect(() => {
+    // Wait for user to be loaded to avoid fighting with plan-based restrictions
+    if (!user) return;
+
+    const savedData = sessionStorage.getItem('proposalFormData');
+    if (savedData) {
+      try {
+        const { mode, projectInput } = JSON.parse(savedData);
+        
+        // Handle budget parsing (e.g., "USD 2000" or "₹ 2000" or "2000")
+        let currencyPart: any = '';
+        let budgetPart = '';
+        
+        if (projectInput.budget) {
+          const parts = projectInput.budget.trim().split(' ');
+          if (parts.length >= 2) {
+            const possibleCode = parts[0].toUpperCase();
+            // Check if it's a valid code, otherwise fallback to USD (handle symbols like ₹)
+            const isValid = CURRENCIES.some(c => c.code === possibleCode);
+            if (isValid) {
+              currencyPart = possibleCode as CurrencyCode;
+              budgetPart = parts.slice(1).join(' ');
+            } else {
+              // If first part is a symbol or invalid code, try to find by symbol? 
+              // For now, just take the rest as budget and default to USD or INR if it was ₹
+              if (parts[0] === '₹' || parts[0] === 'INR') currencyPart = 'INR';
+              budgetPart = parts.slice(1).join(' ');
+            }
+          } else {
+            budgetPart = parts[0];
+          }
+        }
+
+        const initialValues = {
+          clientName: projectInput.clientName || '',
+          title: projectInput.title || '',
+          description: projectInput.description || '',
+          length: projectInput.length || 'medium',
+          mode: mode || ProposalMode.DIRECT_CLIENT,
+          budget: budgetPart.trim(),
+          currency: currencyPart,
+          deadline: projectInput.deadline || '',
+          instructions: projectInput.instructions || '',
+          includeMilestones: !!projectInput.includeMilestones,
+          addStructure: !!projectInput.addStructure,
+          includeQuestions: !!projectInput.includeQuestions,
+          useCompetitiveEdge: !!projectInput.useCompetitiveEdge,
+          useCTA: !!projectInput.useCTA
+        };
+
+        formik.setValues(initialValues);
+        setInitialRegenerationValues(initialValues);
+
+        // Clear session storage so fresh visits don't use old data
+        sessionStorage.removeItem('proposalFormData');
+      } catch (err) {
+        console.error('Failed to parse saved proposal data', err);
+      }
+    }
+  }, [user]); // Re-run when user loads
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -61,39 +247,6 @@ export default function NewProposalPage() {
     fetchProfile();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (user && user.credits <= 0) {
-      setShowCreditModal(true);
-      return;
-    }
-
-    // Store form data in sessionStorage for the generating page
-    const proposalData = {
-      mode: formData.mode,
-      projectInput: {
-        clientName: formData.clientName,
-        title: formData.title,
-        description: formData.description,
-        length: formData.length,
-        budget: `${formData.currency} ${formData.budget}`,
-        deadline: formData.deadline,
-        instructions: formData.instructions,
-        includeMilestones: formData.includeMilestones,
-        addStructure: formData.addStructure,
-        includeQuestions: formData.includeQuestions,
-        useCompetitiveEdge: formData.useCompetitiveEdge,
-        useCTA: formData.useCTA
-      }
-    };
-
-    sessionStorage.setItem('proposalFormData', JSON.stringify(proposalData));
-
-    // Immediately redirect to generating page
-    router.push('/dashboard/proposals/generating');
-  };
-
   const profileCompletion = profileData?.professionalInfo?.profileCompletion || 0;
   const canGenerateProposal = profileCompletion >= 80;
 
@@ -107,6 +260,15 @@ export default function NewProposalPage() {
 
       <div className="relative z-10 max-w-4xl mx-auto px-4 pt-8 space-y-6">
         <CreditModal isOpen={showCreditModal} onClose={() => setShowCreditModal(false)} />
+        <RegenerateConfirmModal 
+          isOpen={showRegenerateModal} 
+          onClose={() => setShowRegenerateModal(false)} 
+          onConfirm={() => {
+            setShowRegenerateModal(false);
+            executeGeneration(formik.values);
+          }}
+          loading={loading}
+        />
         
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -131,11 +293,11 @@ export default function NewProposalPage() {
           </div>
         </div>
 
-        {error && (
+        {(formik.errors.title && formik.touched.title) || (formik.errors.description && formik.touched.description) || (formik.errors.currency && formik.touched.currency) || error ? (
           <div className="p-4 bg-destructive/10 border border-destructive/20 text-destructive-foreground rounded-xl font-medium animate-shake">
-            {error}
+            {(formik.errors.title as string) || (formik.errors.description as string) || (formik.errors.currency as string) || error}
           </div>
-        )}
+        ) : null}
 
         {/* Profile Completion Warning */}
         {!fetchingProfile && !canGenerateProposal && (
@@ -159,25 +321,45 @@ export default function NewProposalPage() {
           </div>
         )}
 
-        <div className="space-y-6">
+        <form onSubmit={formik.handleSubmit} className="space-y-6">
           {/* Proposal Type - Chip Selector */}
           <div className="space-y-3">
-            <Label className="text-muted-foreground font-medium">Proposal Type:</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-muted-foreground font-medium">Proposal Type:</Label>
+              {isFreePlan && (
+                <span className="text-[10px] text-amber-500 font-bold uppercase tracking-[0.1em] flex items-center gap-1.5 bg-amber-500/5 px-2 py-0.5 rounded border border-amber-500/10">
+                  <Lock className="w-2.5 h-2.5" />
+                  Locked proposals available in Elite/Pro
+                </span>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
-              {Object.entries(proposalModeLabels).map(([mode, label]) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setFormData({...formData, mode: mode as ProposalMode})}
-                  className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-                    formData.mode === mode
-                      ? 'bg-gradient-to-r from-[#2DD4BF] to-[#10B981] text-black shadow-[0_0_15px_rgba(45,212,191,0.3)]' 
-                      : 'bg-zinc-900/80 text-zinc-400 border border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+              {Object.entries(proposalModeLabels).map(([mode, label]) => {
+                const isLocked = isFreePlan && mode !== ProposalMode.DIRECT_CLIENT;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    disabled={isLocked}
+                    title={isLocked ? "Upgrade to Elite or Pro to unlock this platform" : undefined}
+                    onClick={() => formik.setFieldValue('mode', mode as ProposalMode)}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+                      formik.values.mode === mode
+                        ? 'bg-gradient-to-r from-[#2DD4BF] to-[#10B981] text-black shadow-[0_0_15px_rgba(45,212,191,0.3)]' 
+                        : isLocked 
+                          ? 'bg-zinc-900/40 text-zinc-500 border border-amber-500/30' 
+                          : 'bg-zinc-900/80 text-zinc-400 border border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700'
+                    } ${isLocked ? 'cursor-not-allowed' : ''}`}
+                  >
+                    {label}
+                    {isLocked && (
+                      <div className="bg-amber-500/20 p-1 rounded-sm">
+                        <Lock className="w-3 h-3 text-amber-500" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -186,37 +368,55 @@ export default function NewProposalPage() {
             <Label htmlFor="clientName" className="text-muted-foreground font-medium">Client Name:</Label>
             <Input
               id="clientName"
+              name="clientName"
               placeholder="e.g. Acme Corp or John Doe"
-              value={formData.clientName}
-              onChange={e => setFormData({...formData, clientName: e.target.value})}
+              value={formik.values.clientName}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
               className="h-12 bg-card/60 border-border hover:border-primary/30 focus-visible:ring-primary/20 text-foreground rounded-xl backdrop-blur-sm transition-all shadow-sm"
             />
           </div>
 
           {/* Project Title */}
           <div className="space-y-2">
-            <Label htmlFor="title" className="text-muted-foreground font-medium">Project Title:</Label>
+            <Label htmlFor="title" className="text-muted-foreground font-medium flex items-center gap-1">
+              Project Title: <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="title"
+              name="title"
               placeholder="Webflow + Airtable Integration Expert - for Top 1% Upwork Partner"
-              value={formData.title}
-              onChange={e => setFormData({...formData, title: e.target.value})}
-              className="h-12 bg-card/60 border-border hover:border-primary/30 focus-visible:ring-primary/20 text-foreground rounded-xl backdrop-blur-sm transition-all shadow-sm"
-              required
+              value={formik.values.title}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              className={`h-12 bg-card/60 border-border hover:border-primary/30 focus-visible:ring-primary/20 text-foreground rounded-xl backdrop-blur-sm transition-all shadow-sm ${formik.touched.title && formik.errors.title ? 'border-destructive focus-visible:ring-destructive/20' : ''}`}
             />
+            {formik.touched.title && formik.errors.title && (
+              <p className="text-xs text-destructive font-bold animate-in fade-in slide-in-from-top-1 pl-1">
+                {formik.errors.title as string}
+              </p>
+            )}
           </div>
 
           {/* Project Description */}
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-muted-foreground font-medium">Project Description:</Label>
+            <Label htmlFor="description" className="text-muted-foreground font-medium flex items-center gap-1">
+              Project Description: <span className="text-destructive">*</span>
+            </Label>
             <textarea
               id="description"
-              className="flex min-h-[250px] w-full rounded-xl border border-border bg-card/60 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 hover:border-primary/30 backdrop-blur-sm transition-all shadow-sm"
+              name="description"
+              className={`flex min-h-[250px] w-full rounded-xl border border-border bg-card/60 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 hover:border-primary/30 backdrop-blur-sm transition-all shadow-sm ${formik.touched.description && formik.errors.description ? 'border-destructive focus-visible:ring-destructive/20' : ''}`}
               placeholder="Provide a detailed project description..."
-              value={formData.description}
-              onChange={e => setFormData({...formData, description: e.target.value})}
-              required
+              value={formik.values.description}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
             />
+            {formik.touched.description && formik.errors.description && (
+              <p className="text-xs text-destructive font-bold animate-in fade-in slide-in-from-top-1 pl-1">
+                {formik.errors.description as string}
+              </p>
+            )}
           </div>
 
           {/* Budget and Deadline */}
@@ -226,28 +426,46 @@ export default function NewProposalPage() {
               <div className="flex gap-2">
                 <div className="w-[120px] shrink-0">
                   <CurrencySelect
-                    value={formData.currency}
-                    onChange={(val) => setFormData({...formData, currency: val})}
+                    value={formik.values.currency}
+                    onChange={(val) => {
+                      formik.setFieldValue('currency', val);
+                      formik.setFieldTouched('currency', true);
+                    }}
                     label=""
+                    allowedCodes={allowedCurrencies}
                   />
                 </div>
                 <Input
                   id="budget"
+                  name="budget"
                   placeholder="2000"
-                  value={formData.budget}
-                  onChange={e => setFormData({...formData, budget: e.target.value})}
-                  className="h-12 bg-card/60 border-border hover:border-primary/30 text-foreground rounded-xl backdrop-blur-sm transition-all flex-1"
+                  value={formik.values.budget}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  className={`h-12 bg-card/60 border-border hover:border-primary/30 text-foreground rounded-xl backdrop-blur-sm transition-all flex-1 ${formik.touched.currency && formik.errors.currency ? 'border-destructive focus-visible:ring-destructive/20' : ''}`}
                 />
               </div>
+              {formik.touched.currency && formik.errors.currency && (
+                <p className="text-xs text-destructive font-bold animate-in fade-in slide-in-from-top-1 pl-1">
+                  {formik.errors.currency as string}
+                </p>
+              )}
+              {isFreePlan && (
+                <p className="text-[10px] text-amber-500 font-bold uppercase tracking-widest mt-1.5 pl-1 italic">
+                  ✨ 40+ currencies available in Elite/Pro plans
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="deadline" className="text-muted-foreground font-medium">Deadline</Label>
               <Input
                 id="deadline"
+                name="deadline"
                 type="text"
                 placeholder="dd/mm/yyyy"
-                value={formData.deadline}
-                onChange={e => setFormData({...formData, deadline: e.target.value})}
+                value={formik.values.deadline}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
                 className="h-12 bg-card/60 border-border hover:border-primary/30 text-foreground rounded-xl backdrop-blur-sm transition-all"
               />
             </div>
@@ -257,10 +475,12 @@ export default function NewProposalPage() {
           <div className="space-y-2">
             <textarea
               id="instructions"
+              name="instructions"
               placeholder="Special Instructions"
               className="flex min-h-[80px] w-full rounded-xl border border-border bg-card/60 px-4 py-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 hover:border-primary/30 backdrop-blur-sm transition-all shadow-sm"
-              value={formData.instructions}
-              onChange={e => setFormData({...formData, instructions: e.target.value})}
+              value={formik.values.instructions}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
             />
           </div>
 
@@ -307,9 +527,9 @@ export default function NewProposalPage() {
                 <button
                   key={toggle.key}
                   type="button"
-                  onClick={() => setFormData(prev => ({...prev, [toggle.key]: !prev[toggle.key as keyof typeof prev]}))}
+                  onClick={() => formik.setFieldValue(toggle.key, !formik.values[toggle.key as keyof typeof formik.values])}
                   className={`px-5 py-2 rounded text-[11px] font-bold uppercase tracking-wider transition-all ${
-                    formData[toggle.key as keyof typeof formData] 
+                    formik.values[toggle.key as keyof typeof formik.values] 
                       ? 'bg-[#FFB800] text-black shadow-[0_0_15px_rgba(250,184,0,0.3)]' 
                       : 'bg-zinc-900/80 text-zinc-400 border border-zinc-800 hover:bg-zinc-800'
                   }`}
@@ -325,9 +545,9 @@ export default function NewProposalPage() {
                 <button
                   key={opt.val}
                   type="button"
-                  onClick={() => setFormData({...formData, length: opt.val})}
+                  onClick={() => formik.setFieldValue('length', opt.val)}
                   className={`px-5 py-2 rounded text-[11px] font-bold uppercase tracking-wider transition-all ${
-                    formData.length === opt.val 
+                    formik.values.length === opt.val 
                       ? 'bg-[#FFB800] text-black shadow-[0_0_15px_rgba(250,184,0,0.3)]' 
                       : 'bg-zinc-900/80 text-zinc-400 border border-zinc-800 hover:bg-zinc-800'
                   }`}
@@ -341,7 +561,7 @@ export default function NewProposalPage() {
           <div className="flex flex-wrap items-center gap-6 pt-10">
             <div className="flex items-center gap-6">
               <Button
-                onClick={handleSubmit}
+                type="submit"
                 disabled={loading || !canGenerateProposal}
                 className="h-12 px-10 text-black font-bold tracking-tight rounded-lg bg-gradient-to-r from-[#2DD4BF] to-[#10B981] hover:brightness-105 active:scale-[0.98] transition-all shadow-md shadow-emerald-500/10 hover:shadow-lg hover:shadow-emerald-500/20 relative overflow-hidden group border border-emerald-400/20"
               >
@@ -362,7 +582,7 @@ export default function NewProposalPage() {
               </div>
             </div>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );

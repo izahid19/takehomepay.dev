@@ -26,6 +26,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (!loading && user && user.role !== 'admin' && pathname === '/dashboard') {
       router.push('/dashboard/proposals');
     }
+
+    // If an admin tries to access user-specific pages, send them back to admin dashboard
+    if (!loading && user && user.role === 'admin' && (pathname === '/dashboard/proposals' || pathname.startsWith('/dashboard/proposals/new'))) {
+      router.push('/dashboard');
+    }
   }, [user, loading, pathname, router]);
 
   if (loading) {
@@ -37,9 +42,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const navItems = [
-    { label: 'Admin Overview', href: '/dashboard', icon: LayoutDashboard },
-    { label: 'Manage Users', href: '/admin', icon: ShieldCheck },
-    { label: 'System Proposals', href: '/dashboard/proposals', icon: FileText },
+    { label: 'Analytics Overview', href: '/dashboard', icon: LayoutDashboard },
+    { label: 'Manage Users', href: '/dashboard/users', icon: ShieldCheck },
   ];
 
   const isAdmin = user?.role === 'admin';
@@ -50,56 +54,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Header />
 
       <div className="flex flex-1 pt-12">
-        {/* Sidebar - ONLY FOR ADMINS */}
-        {isAdmin && (
-          <aside className="w-64 border-r border-border bg-card/30 backdrop-blur-sm flex-col hidden md:flex sticky top-20 h-[calc(100vh-5rem)]">
-            <div className="p-6">
-              <div className="flex items-center gap-2 font-bold text-sm uppercase tracking-widest text-primary/70">
-                Admin Console
-              </div>
-            </div>
-
-            <nav className="flex-1 px-4 py-4 space-y-1">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
-                    pathname === item.href 
-                      ? "bg-primary/10 text-primary" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                >
-                  <item.icon className={cn(
-                    "w-5 h-5",
-                    pathname === item.href ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
-                  )} />
-                  <span className="font-medium">{item.label}</span>
-                </Link>
-              ))}
-            </nav>
-
-            <div className="p-4 mt-auto border-t border-border">
-              <button 
-                onClick={logout}
-                className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
-              >
-                <LogOut className="w-5 h-5" />
-                <span className="font-medium">Logout</span>
-              </button>
-            </div>
-          </aside>
-        )}
-
         {/* Main Content */}
-        <main className={cn(
-          "flex-1 overflow-y-auto min-h-screen",
-          isAdmin ? "md:pl-0" : "w-full"
-        )}>
-          <div className="p-4 md:p-8 max-w-7xl mx-auto pt-10">
-            {children}
-          </div>
+        <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+          {children}
         </main>
       </div>
     </div>

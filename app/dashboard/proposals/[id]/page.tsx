@@ -2,16 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import api from '@/lib/axios';
+import { toast } from 'react-toastify';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Copy, Check, Download, FileText, Sparkles, PenLine, Save, X, Loader2 } from 'lucide-react';
+import { ChevronLeft, Copy, Check, Download, FileText, Sparkles, PenLine, Save, X, Loader2, Lock, RefreshCw } from 'lucide-react';
 import { proposalModeLabels } from '@/types/proposal';
 import { format } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
+import { useAuth } from '@/hooks/useAuth';
 
 import Link from 'next/link';
 
 export default function ViewProposalPage() {
+  const { user } = useAuth();
+  const isFreePlan = !user || user.plan === 'free';
   const params = useParams();
   const router = useRouter();
   const [proposal, setProposal] = useState<any>(null);
@@ -50,13 +54,22 @@ export default function ViewProposalPage() {
         generatedText: editedText
       });
       setProposal(response.data.data);
+      toast.success('Changes saved successfully');
       setIsEditing(false);
-    } catch (err) {
-      console.error('Failed to save proposal', err);
-      alert('Failed to save changes');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to save changes');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleRegenerate = () => {
+    const proposalData = {
+      mode: proposal.mode,
+      projectInput: proposal.projectInput
+    };
+    sessionStorage.setItem('proposalFormData', JSON.stringify(proposalData));
+    router.push('/dashboard/proposals/new');
   };
 
   if (loading) return (
@@ -112,19 +125,35 @@ export default function ViewProposalPage() {
             {!isEditing && (
               <Button 
                 onClick={() => setIsEditing(true)}
-                className="bg-[#FFB800] hover:bg-[#E6A600] text-black font-bold rounded-md px-5 h-11 transition-all active:scale-95 shadow-lg shadow-[#FFB800]/10"
+                disabled={isFreePlan}
+                className={`bg-[#FFB800] hover:bg-[#E6A600] text-black font-bold rounded-md px-5 h-11 transition-all active:scale-95 shadow-lg shadow-[#FFB800]/10 ${isFreePlan ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
               >
-                <PenLine className="w-4 h-4 mr-2" />
+                {isFreePlan ? <Lock className="w-4 h-4 mr-2" /> : <PenLine className="w-4 h-4 mr-2" />}
                 Edit Proposal
               </Button>
             )}
             <Button 
-              className="bg-[#D97706] hover:bg-[#C26A05] text-white font-bold rounded-md px-5 h-11 transition-all active:scale-95 shadow-lg shadow-[#D97706]/10"
-              onClick={() => window.print()}
+              className={`bg-[#D97706] hover:bg-[#C26A05] text-white font-bold rounded-md px-5 h-11 transition-all active:scale-95 shadow-lg shadow-[#D97706]/10 ${isFreePlan ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
+              onClick={() => !isFreePlan && window.print()}
+              disabled={isFreePlan}
             >
-              <Download className="w-4 h-4 mr-2" />
+              {isFreePlan ? <Lock className="w-4 h-4 mr-2" /> : <Download className="w-4 h-4 mr-2" />}
               Download PDF
             </Button>
+            <Button 
+              variant="outline"
+              onClick={handleRegenerate}
+              disabled={isFreePlan}
+              className={`bg-zinc-900 border-zinc-800 text-zinc-400 hover:bg-black hover:text-white font-bold rounded-md px-5 h-11 transition-all active:scale-95 shadow-lg group ${isFreePlan ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
+            >
+              <RefreshCw className="w-4 h-4 mr-2 group-hover:rotate-180 transition-transform duration-500" />
+              Regenerate
+            </Button>
+            {isFreePlan && (
+              <Link href="/pricing" className="text-xs font-bold text-amber-500 hover:text-amber-400 transition-colors uppercase tracking-widest pl-2">
+                Upgrade to Unlock
+              </Link>
+            )}
           </div>
           
           <button 

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/axios';
+import { useAuth } from '@/hooks/useAuth';
 import { ProposalGeneratingSkeleton } from '@/components/ProposalGeneratingSkeleton';
 import { Sparkles, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,10 +18,12 @@ const AI_STATUS_STEPS = [
 
 export default function GeneratingProposalPage() {
   const router = useRouter();
+  const { refreshUser } = useAuth();
   const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(true);
+  const hasStarted = useRef(false);
 
   // Cycle through AI status messages
   useEffect(() => {
@@ -35,6 +38,9 @@ export default function GeneratingProposalPage() {
 
   // Generate proposal on mount
   useEffect(() => {
+    if (hasStarted.current) return;
+    hasStarted.current = true;
+
     const generateProposal = async () => {
       try {
         // Get the form data from sessionStorage (set by the form page)
@@ -48,6 +54,11 @@ export default function GeneratingProposalPage() {
         const formData = JSON.parse(formDataStr);
 
         const response = await api.post('/proposals/generate', formData);
+
+        // Refresh user data to update credits
+        if (refreshUser) {
+          await refreshUser();
+        }
 
         // Clear the temp data
         sessionStorage.removeItem('proposalFormData');
