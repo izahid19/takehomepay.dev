@@ -15,6 +15,7 @@ import {
   TestimonialSection,
   FinalCtaSection,
 } from "@/components/sections";
+import { Footer } from "@/components/Footer";
 
 export default function Home() {
   const [blocks, setBlocks] = useState<React.ReactNode[]>([]);
@@ -118,38 +119,7 @@ export default function Home() {
       <FinalCtaSection />
 
       {/* Footer */}
-      <footer className="relative z-10 py-8 px-4 border-t border-border">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex flex-col items-center sm:items-start gap-1">
-            <div className="flex items-center gap-2 mb-2">
-              <img 
-                src="/logo.png" 
-                alt="takehomepay.dev logo" 
-                className="h-7 w-auto"
-              />
-            </div>
-            <p className="text-muted-foreground text-sm max-w-md text-center sm:text-left">
-              AI proposals and income intelligence for freelancers.
-              Win more projects. Earn what you deserve.
-            </p>
-            <div className="text-muted-foreground text-xs flex items-center gap-1.5 mt-2">
-              Built by{" "}
-              <a
-                href="https://devzahid.vercel.app/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary font-medium hover:underline"
-              >
-                Zahid Mushtaq
-              </a>
-            </div>
-          </div>
-
-          <p className="text-muted-foreground text-sm">
-            &copy; {new Date().getFullYear()} takehomepay.dev. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

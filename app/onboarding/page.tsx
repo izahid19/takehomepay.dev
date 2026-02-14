@@ -238,7 +238,7 @@ export default function OnboardingPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            Welcome to TakeHomePay! 👋
+            Welcome to Pitchdown! 👋
           </h1>
           <p className="text-muted-foreground text-lg">
             Let's set up your profile to start generating winning proposals

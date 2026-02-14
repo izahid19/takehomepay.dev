@@ -4,9 +4,10 @@ import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Check, X, Calculator as CalcIcon, Sparkles } from "lucide-react";
+import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "Pricing | takehomepay.dev",
+  title: "Pricing | Pitchdown",
   description: "Simple, honest pricing for freelancers. Start free, upgrade when you need more.",
 };
 
@@ -239,17 +240,7 @@ export default function PricingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 py-8 px-4 border-t border-border">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-2">
-            <CalcIcon className="h-5 w-5 text-primary" />
-            <span className="text-lg font-bold text-foreground">takehomepay.dev</span>
-          </div>
-          <p className="text-muted-foreground text-sm">
-            © {new Date().getFullYear()} takehomepay.dev. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

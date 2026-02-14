@@ -4,6 +4,7 @@ import { Header } from "@/components/Header";
 import { Calculator } from "@/components/Calculator";
 import { Calculator as CalcIcon } from "lucide-react";
 import { Spotlight } from "@/components/ui/spotlight";
+import { Footer } from "@/components/Footer";
 
 export default function CalculatorPage() {
   return (
@@ -42,35 +43,7 @@ export default function CalculatorPage() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 py-8 px-4 border-t border-border mt-auto">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex flex-col items-center sm:items-start gap-1">
-            <div className="flex items-center gap-2">
-              <CalcIcon className="h-5 w-5 text-primary" />
-              <span className="text-xl font-bold text-foreground">takehomepay.dev</span>
-            </div>
-            <p className="text-muted-foreground text-sm max-w-md text-center sm:text-left">
-              The free calculator for freelancers to know their real income after platform fees and taxes.
-            </p>
-            <div className="text-muted-foreground text-xs flex items-center gap-1.5 mt-2">
-              Built with{" "}
-              <span className="text-red-500 animate-pulse">❤️</span> by{" "}
-              <a
-                href="https://devzahid.vercel.app/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary font-medium hover:underline"
-              >
-                Zahid Mushtaq
-              </a>
-            </div>
-          </div>
-
-          <p className="text-muted-foreground text-sm">
-            © {new Date().getFullYear()} takehomepay.dev. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

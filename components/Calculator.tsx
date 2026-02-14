@@ -135,7 +135,7 @@ export function Calculator() {
     >
       <CardHeader className="pb-4">
         <CardTitle className="text-2xl text-center text-transparent bg-clip-text bg-gradient-to-r from-foreground to-muted-foreground">
-          Calculate Your Take-Home Pay
+          Calculate Your Real Earnings
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -249,7 +249,7 @@ export function Calculator() {
           </div>
           <div className="calc-result">
             <ResultCard
-              label="Take-Home Pay"
+              label="Real Earnings"
               value={formatValue(results.takeHomePay)}
               isPrimary
             />

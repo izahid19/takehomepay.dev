@@ -62,7 +62,7 @@ export function Header() {
           <Link href="/" className="flex items-center gap-2 group shrink-0">
             <img 
               src="/logo.png" 
-              alt="takehomepay.dev logo" 
+              alt="Pitchdown logo" 
               className="h-8 w-auto"
             />
           </Link>

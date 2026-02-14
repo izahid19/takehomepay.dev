@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     "AI tools for solopreneurs",
     "best AI proposal writing software",
   ],
-  authors: [{ name: "Zahid Mushtaq", url: "https://devzahid.in" }],
+
   openGraph: {
     title: "Pitchdown — Stop Pitching, Start Winning.",
     description:
@@ -84,7 +84,7 @@ export default function RootLayout({
               "logo": "https://pitchdown.in/logo.png",
               "sameAs": [
                 "https://twitter.com/pitchdown",
-                "https://linkedin.com/company/pitchdown"
+                "https://linkedin.com/company/pitchdown-in"
               ]
             })
           }}
