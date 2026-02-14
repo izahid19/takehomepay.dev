@@ -1,4 +1,4 @@
-// File: D:\project\sass-product\takehomepay.dev\Frontend\app\layout.tsx
+// File: D:\project\SAAS_PRODUCT\PitchDown\Frontend\app\layout.tsx
 import * as entry from '../../../app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

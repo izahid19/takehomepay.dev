@@ -9,64 +9,71 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Mail, CheckCircle2 } from 'lucide-react';
+import { Loader2, Mail, Eye, EyeOff } from 'lucide-react';
+
 import Cookies from 'js-cookie';
+import { showToast } from '@/lib/toast';
+import { useFormik } from 'formik';
+import { signupSchema } from '@/lib/validations/signup';
 
 export default function SignupPage() {
+
   const router = useRouter();
   const [step, setStep] = useState<'signup' | 'verify'>('signup');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { login } = useAuth();
 
-  const handleRequestOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setSuccess('');
-    
-    try {
-      await api.post('/auth/request-otp', { 
-        firstName,
-        lastName,
-        email, 
-        password 
-      });
-      setSuccess('OTP sent to your email! Please check your inbox.');
-      setStep('verify');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to send OTP. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const formik = useFormik({
+    initialValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
+    validationSchema: signupSchema,
+    onSubmit: async (values, { setSubmitting }) => {
+      try {
+        await api.post('/auth/request-otp', {
+          firstName: values.firstName,
+          lastName: values.lastName,
+          email: values.email,
+          password: values.password
+        });
+        showToast.success('OTP sent to your email! Please check your inbox.');
+        setStep('verify');
+      } catch (err: any) {
+        showToast.apiError(err, 'Failed to send OTP. Please try again.');
+      } finally {
+        setSubmitting(false);
+      }
+    },
+  });
 
   const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
+    setVerifying(true);
     
     try {
-      const response = await api.post('/auth/verify-otp', { email, otp });
+      const response = await api.post('/auth/verify-otp', { 
+        email: formik.values.email, 
+        otp 
+      });
       
-      // Set token in local cookie for cross-domain support
       if (response.data.token) {
         Cookies.set('access_token', response.data.token, { expires: 1, path: '/' });
       }
       
       login(response.data.user);
-      // Redirect to onboarding after successful signup
+      showToast.success('Account created successfully!');
       router.push('/onboarding');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid OTP. Please try again.');
+      showToast.apiError(err, 'Invalid OTP. Please try again.');
     } finally {
-      setLoading(false);
+      setVerifying(false);
     }
   };
 
@@ -88,71 +95,133 @@ export default function SignupPage() {
         </CardHeader>
 
         {step === 'signup' ? (
-          <form onSubmit={handleRequestOTP}>
+          <form onSubmit={formik.handleSubmit}>
             <CardContent className="space-y-4">
-              {error && (
-                <div className="p-3 text-sm text-destructive-foreground bg-destructive/10 border border-destructive/20 rounded-md">
-                  {error}
-                </div>
-              )}
-              
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
+                  <Label htmlFor="firstName" className="flex items-center gap-1">
+                    First Name <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="firstName"
+                    name="firstName"
                     type="text"
                     placeholder="John"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    required
-                    className="bg-background/50"
+                    value={formik.values.firstName}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={`bg-background/50 ${formik.touched.firstName && formik.errors.firstName ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                   />
+                  {formik.touched.firstName && formik.errors.firstName && (
+                    <p className="text-[10px] text-destructive mt-1">{formik.errors.firstName}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
+                  <Label htmlFor="lastName" className="flex items-center gap-1">
+                    Last Name <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="lastName"
+                    name="lastName"
                     type="text"
                     placeholder="Doe"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    required
-                    className="bg-background/50"
+                    value={formik.values.lastName}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={`bg-background/50 ${formik.touched.lastName && formik.errors.lastName ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                   />
+                  {formik.touched.lastName && formik.errors.lastName && (
+                    <p className="text-[10px] text-destructive mt-1">{formik.errors.lastName}</p>
+                  )}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="flex items-center gap-1">
+                  Email <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="bg-background/50"
+                  placeholder="jhon@gmail.com"
+                  value={formik.values.email}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  className={`bg-background/50 ${formik.touched.email && formik.errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 />
+                {formik.touched.email && formik.errors.email && (
+                  <p className="text-xs text-destructive mt-1">{formik.errors.email}</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Must be at least 8 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  className="bg-background/50"
-                />
+                <Label htmlFor="password" title="Password" className="flex items-center gap-1">
+                  Password <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Must be at least 8 characters"
+                    value={formik.values.password}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={`bg-background/50 pr-10 ${formik.touched.password && formik.errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                {formik.touched.password && formik.errors.password && (
+                  <p className="text-xs text-destructive mt-1">{formik.errors.password}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" title="Confirm Password" className="flex items-center gap-1">
+                  Confirm Password <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Re-enter your password"
+                    value={formik.values.confirmPassword}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={`bg-background/50 pr-10 ${formik.touched.confirmPassword && formik.errors.confirmPassword ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                {formik.touched.confirmPassword && formik.errors.confirmPassword && (
+                  <p className="text-xs text-destructive mt-1">{formik.errors.confirmPassword}</p>
+                )}
               </div>
             </CardContent>
+
             <CardFooter className="flex flex-col space-y-4">
-              <Button className="w-full h-11 text-base font-medium" type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {loading ? 'Sending OTP...' : 'Get Started'}
+              <Button className="w-full h-11 text-base font-medium" type="submit" disabled={formik.isSubmitting}>
+                {formik.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {formik.isSubmitting ? 'Sending OTP...' : 'Get Started'}
               </Button>
               <div className="text-sm text-center text-muted-foreground">
                 Already have an account?{' '}
@@ -165,18 +234,6 @@ export default function SignupPage() {
         ) : (
           <form onSubmit={handleVerifyOTP}>
             <CardContent className="space-y-4">
-              {success && (
-                <div className="p-3 text-sm text-green-600 dark:text-green-400 bg-green-500/10 border border-green-500/20 rounded-md flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4" />
-                  {success}
-                </div>
-              )}
-              {error && (
-                <div className="p-3 text-sm text-destructive-foreground bg-destructive/10 border border-destructive/20 rounded-md">
-                  {error}
-                </div>
-              )}
-
               <div className="flex items-center justify-center py-6">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
                   <Mail className="w-8 h-8 text-primary" />
@@ -187,11 +244,13 @@ export default function SignupPage() {
                 <p className="text-sm text-muted-foreground">
                   We sent a verification code to
                 </p>
-                <p className="font-medium">{email}</p>
+                <p className="font-medium">{formik.values.email}</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="otp">Verification Code</Label>
+                <Label htmlFor="otp" className="flex items-center gap-1">
+                  Verification Code <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="otp"
                   type="text"
@@ -205,9 +264,9 @@ export default function SignupPage() {
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
-              <Button className="w-full h-11 text-base font-medium" type="submit" disabled={loading || otp.length !== 6}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {loading ? 'Verifying...' : 'Verify & Create Account'}
+              <Button className="w-full h-11 text-base font-medium" type="submit" disabled={verifying || otp.length !== 6}>
+                {verifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {verifying ? 'Verifying...' : 'Verify & Create Account'}
               </Button>
               <div className="text-sm text-center text-muted-foreground">
                 Didn't receive the code?{' '}
@@ -216,8 +275,6 @@ export default function SignupPage() {
                   onClick={() => {
                     setStep('signup');
                     setOtp('');
-                    setError('');
-                    setSuccess('');
                   }}
                   className="text-primary hover:underline font-medium"
                 >
@@ -231,3 +288,4 @@ export default function SignupPage() {
     </div>
   );
 }
+

@@ -11,40 +11,42 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import Cookies from 'js-cookie';
+import { showToast } from '@/lib/toast';
+import { useFormik } from 'formik';
+import { loginSchema } from '@/lib/validations/login';
 
 function LoginForm() {
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const { login } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    
-    try {
-      const response = await api.post('/auth/login', { email, password });
-      
-      // Set token in local cookie for cross-domain support
-      if (response.data.token) {
-        Cookies.set('access_token', response.data.token, { expires: 1, path: '/' });
+  const formik = useFormik({
+    initialValues: {
+      email: '',
+      password: '',
+    },
+    validationSchema: loginSchema,
+    onSubmit: async (values, { setSubmitting }) => {
+      try {
+        const response = await api.post('/auth/login', values);
+        
+        if (response.data.token) {
+          Cookies.set('access_token', response.data.token, { expires: 1, path: '/' });
+        }
+        
+        login(response.data.user);
+        showToast.success('Login successful!');
+        window.location.href = (redirect && redirect.startsWith('/')) ? redirect : '/';
+      } catch (err: any) {
+        showToast.apiError(err, 'Login failed. Please check your credentials.');
+      } finally {
+        setSubmitting(false);
       }
-      
-      login(response.data.user);
-      // Force full page reload to ensure cookies are sent to the server/middleware
-      window.location.href = (redirect && redirect.startsWith('/')) ? redirect : '/';
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+  });
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -57,36 +59,42 @@ function LoginForm() {
             Enter your credentials to access your dashboard
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={formik.handleSubmit}>
           <CardContent className="space-y-4">
-            {error && (
-              <div className="p-3 text-sm text-destructive-foreground bg-destructive/10 border border-destructive/20 rounded-md">
-                {error}
-              </div>
-            )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="flex items-center gap-1">
+                Email <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="bg-background/50"
+                placeholder="jhon@gmail.com"
+
+
+                value={formik.values.email}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                className={`bg-background/50 ${formik.touched.email && formik.errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}`}
               />
+              {formik.touched.email && formik.errors.email && (
+                <p className="text-xs text-destructive mt-1">{formik.errors.email}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" title="Password" className="flex items-center gap-1">
+                Password <span className="text-destructive">*</span>
+              </Label>
               <div className="relative">
                 <Input
                   id="password"
+                  name="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="bg-background/50 pr-10"
+                  value={formik.values.password}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  className={`bg-background/50 pr-10 ${formik.touched.password && formik.errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 />
                 <button
                   type="button"
@@ -100,6 +108,9 @@ function LoginForm() {
                   )}
                 </button>
               </div>
+              {formik.touched.password && formik.errors.password && (
+                <p className="text-xs text-destructive mt-1">{formik.errors.password}</p>
+              )}
               <div className="flex justify-end">
                 <Link 
                   href="/forgot-password" 
@@ -111,9 +122,10 @@ function LoginForm() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <Button className="w-full h-11 text-base font-medium" type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign In
+            <Button className="w-full h-11 text-base font-medium" type="submit" disabled={formik.isSubmitting}>
+              {formik.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {formik.isSubmitting ? 'Signing in...' : 'Sign In'}
+
             </Button>
             <div className="text-sm text-center text-muted-foreground">
               Don&apos;t have an account?{' '}
@@ -139,3 +151,4 @@ export default function LoginPage() {
     </Suspense>
   );
 }
+

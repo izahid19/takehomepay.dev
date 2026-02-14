@@ -9,35 +9,38 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, ArrowLeft } from 'lucide-react';
+import { useFormik } from 'formik';
+import { forgotPasswordSchema } from '@/lib/validations/forgot-password';
+import { showToast } from '@/lib/toast';
 
 export default function ForgotPasswordPage() {
+
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    
-    try {
-      await api.post('/auth/forgot-password', { email });
-      setSuccess(true);
-      // Store email in sessionStorage to use on the reset page
-      sessionStorage.setItem('resetEmail', email);
-      
-      // Delay redirect to show success message
-      setTimeout(() => {
-        router.push('/reset-password');
-      }, 2000);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Something went wrong. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const formik = useFormik({
+    initialValues: {
+      email: '',
+    },
+    validationSchema: forgotPasswordSchema,
+    onSubmit: async (values, { setSubmitting }) => {
+      try {
+        await api.post('/auth/forgot-password', values);
+        setSuccess(true);
+        // Store email in sessionStorage to use on the reset page
+        sessionStorage.setItem('resetEmail', values.email);
+        
+        // Delay redirect to show success message
+        setTimeout(() => {
+          router.push('/reset-password');
+        }, 2000);
+      } catch (err: any) {
+        showToast.apiError(err, 'Something went wrong. Please try again.');
+      } finally {
+        setSubmitting(false);
+      }
+    },
+  });
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -59,29 +62,30 @@ export default function ForgotPasswordPage() {
           </CardDescription>
         </CardHeader>
         {!success ? (
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={formik.handleSubmit}>
             <CardContent className="space-y-4">
-              {error && (
-                <div className="p-3 text-sm text-destructive-foreground bg-destructive/10 border border-destructive/20 rounded-md">
-                  {error}
-                </div>
-              )}
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email" className="flex items-center gap-1">
+                  Email Address <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="bg-background/50"
+                  value={formik.values.email}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  className={`bg-background/50 ${formik.touched.email && formik.errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 />
+                {formik.touched.email && formik.errors.email && (
+                  <p className="text-xs text-destructive mt-1">{formik.errors.email}</p>
+                )}
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full h-11 text-base font-medium" type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button className="w-full h-11 text-base font-medium" type="submit" disabled={formik.isSubmitting}>
+                {formik.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Send Reset Code
               </Button>
             </CardFooter>
@@ -100,3 +104,4 @@ export default function ForgotPasswordPage() {
     </div>
   );
 }
+

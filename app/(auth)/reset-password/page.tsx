@@ -9,17 +9,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, ArrowLeft, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { useFormik } from 'formik';
+import { resetPasswordSchema } from '@/lib/validations/reset-password';
+import { showToast } from '@/lib/toast';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
@@ -31,37 +29,34 @@ export default function ResetPasswordPage() {
     }
   }, [router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      setLoading(false);
-      return;
-    }
-
-    if (otp.length !== 6) {
-      setError('Please enter a valid 6-digit code');
-      setLoading(false);
-      return;
-    }
-    
-    try {
-      await api.post('/auth/reset-password', { email, otp, password });
-      setSuccess(true);
-      sessionStorage.removeItem('resetEmail');
-      
-      setTimeout(() => {
-        router.push('/login');
-      }, 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to reset password. The code may be invalid or expired.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const formik = useFormik({
+    initialValues: {
+      otp: '',
+      password: '',
+      confirmPassword: '',
+    },
+    validationSchema: resetPasswordSchema,
+    onSubmit: async (values, { setSubmitting }) => {
+      try {
+        await api.post('/auth/reset-password', { 
+          email, 
+          otp: values.otp, 
+          password: values.password 
+        });
+        setSuccess(true);
+        sessionStorage.removeItem('resetEmail');
+        showToast.success('Password reset successfully!');
+        
+        setTimeout(() => {
+          router.push('/login');
+        }, 3000);
+      } catch (err: any) {
+        showToast.apiError(err, 'Failed to reset password. The code may be invalid or expired.');
+      } finally {
+        setSubmitting(false);
+      }
+    },
+  });
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -85,40 +80,42 @@ export default function ResetPasswordPage() {
           </CardDescription>
         </CardHeader>
         {!success ? (
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={formik.handleSubmit}>
             <CardContent className="space-y-4">
-              {error && (
-                <div className="p-3 text-sm text-destructive-foreground bg-destructive/10 border border-destructive/20 rounded-md">
-                  {error}
-                </div>
-              )}
-              
               <div className="space-y-2">
-                <Label htmlFor="otp">Verification Code</Label>
+                <Label htmlFor="otp" className="flex items-center gap-1">
+                  Verification Code <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="otp"
+                  name="otp"
                   type="text"
                   placeholder="000000"
                   maxLength={6}
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
-                  required
-                  className="bg-background/50 text-center tracking-[0.5em] text-xl font-bold"
+                  value={formik.values.otp}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  className={`bg-background/50 text-center tracking-[0.5em] text-xl font-bold ${formik.touched.otp && formik.errors.otp ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 />
+                {formik.touched.otp && formik.errors.otp && (
+                  <p className="text-xs text-destructive mt-1">{formik.errors.otp}</p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">New Password</Label>
+                <Label htmlFor="password" title="Password" className="flex items-center gap-1">
+                  New Password <span className="text-destructive">*</span>
+                </Label>
                 <div className="relative">
                   <Input
                     id="password"
+                    name="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your new password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="bg-background/50 pr-10"
-                    minLength={8}
+                    value={formik.values.password}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={`bg-background/50 pr-10 ${formik.touched.password && formik.errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                   />
                   <button
                     type="button"
@@ -132,20 +129,25 @@ export default function ResetPasswordPage() {
                     )}
                   </button>
                 </div>
+                {formik.touched.password && formik.errors.password && (
+                  <p className="text-xs text-destructive mt-1">{formik.errors.password}</p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                <Label htmlFor="confirmPassword" title="Confirm Password" className="flex items-center gap-1">
+                  Confirm New Password <span className="text-destructive">*</span>
+                </Label>
                 <div className="relative">
                   <Input
                     id="confirmPassword"
+                    name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Re-enter your new password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    className="bg-background/50 pr-10"
-                    minLength={8}
+                    value={formik.values.confirmPassword}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={`bg-background/50 pr-10 ${formik.touched.confirmPassword && formik.errors.confirmPassword ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                   />
                   <button
                     type="button"
@@ -159,11 +161,14 @@ export default function ResetPasswordPage() {
                     )}
                   </button>
                 </div>
+                {formik.touched.confirmPassword && formik.errors.confirmPassword && (
+                  <p className="text-xs text-destructive mt-1">{formik.errors.confirmPassword}</p>
+                )}
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full h-11 text-base font-medium" type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button className="w-full h-11 text-base font-medium" type="submit" disabled={formik.isSubmitting}>
+                {formik.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Reset Password
               </Button>
             </CardFooter>
@@ -183,3 +188,4 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
+

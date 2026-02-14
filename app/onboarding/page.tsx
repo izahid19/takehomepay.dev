@@ -20,6 +20,8 @@ import {
   ChevronRight,
   AlertTriangle
 } from 'lucide-react';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 
 const STEPS = [
   { id: 1, title: 'Personal Info', icon: User, description: 'Tell us about yourself' },
@@ -166,15 +168,41 @@ export default function OnboardingPage() {
     }
   };
 
+  const countWords = (str: string) => {
+    return str.trim().split(/\s+/).filter(Boolean).length;
+  };
+
   const validateCurrentStep = () => {
     if (currentStep === 1) {
-      return formData.personalInfo.firstName.trim() && formData.personalInfo.lastName.trim();
+      const { firstName, lastName, phone } = formData.personalInfo;
+      return firstName.trim() !== '' && lastName.trim() !== '' && phone.trim().length >= 10;
     }
+    
+    if (currentStep === 2) {
+      const { companyName, website } = formData.companyInfo;
+      return companyName.trim() !== '' && website.trim() !== '';
+    }
+
     if (currentStep === 3) {
-      return formData.professionalInfo.jobTitle.trim();
+      const { jobTitle, bio, experience } = formData.professionalInfo;
+      return (
+        jobTitle.trim().length > 8 && 
+        countWords(bio) >= 30 && 
+        experience.trim() !== ''
+      );
     }
+
+    if (currentStep === 4) {
+      const skills = skillsInput.split(',').map(s => s.trim()).filter(Boolean);
+      const hasValidProjects = formData.projects.length > 0 && formData.projects.every(p => 
+        p.title.trim().length > 8 && countWords(p.description) >= 30
+      );
+      return skills.length >= 3 && hasValidProjects;
+    }
+    
     return true;
   };
+
 
   const addProject = () => {
     setFormData({
@@ -309,19 +337,66 @@ export default function OnboardingPage() {
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
+                <div className="space-y-2 relative phone-input-container">
+                  <style jsx global>{`
+                    .phone-input-container .react-tel-input .form-control {
+                      width: 100% !important;
+                      height: 3rem !important;
+                      background: rgba(var(--background), 0.5) !important;
+                      background-color: #0a0a0a !important;
+                      border: 1px solid hsl(var(--border)) !important;
+                      border-radius: 0.75rem !important;
+                      color: hsl(var(--foreground)) !important;
+                      font-size: 0.875rem !important;
+                      padding-left: 48px !important;
+                    }
+                    .phone-input-container .react-tel-input .flag-dropdown {
+                      background: transparent !important;
+                      border: none !important;
+                      border-radius: 0.75rem 0 0 0.75rem !important;
+                    }
+                    .phone-input-container .react-tel-input .selected-flag {
+                      background: transparent !important;
+                      width: 40px !important;
+                      padding: 0 0 0 12px !important;
+                    }
+                    .phone-input-container .react-tel-input .selected-flag:hover,
+                    .phone-input-container .react-tel-input .selected-flag:focus {
+                      background: rgba(255, 255, 255, 0.05) !important;
+                    }
+                    .phone-input-container .react-tel-input .country-list {
+                      background-color: #0a0a0a !important;
+                      border: 1px solid hsl(var(--border)) !important;
+                      color: #fff !important;
+                      border-radius: 0.75rem !important;
+                      margin-top: 4px !important;
+                      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
+                    }
+                    .phone-input-container .react-tel-input .country-list .country:hover {
+                      background-color: rgba(var(--primary), 0.1) !important;
+                    }
+                    .phone-input-container .react-tel-input .country-list .country.highlight {
+                      background-color: rgba(var(--primary), 0.2) !important;
+                    }
+                  `}</style>
+                  <Label htmlFor="phone">
+                    Phone Number <span className="text-destructive">*</span>
+                  </Label>
+                  <PhoneInput
+                    country={'us'}
                     value={formData.personalInfo.phone}
-                    onChange={(e) =>
+                    onChange={(phone) =>
                       setFormData({
                         ...formData,
-                        personalInfo: { ...formData.personalInfo, phone: e.target.value },
+                        personalInfo: { ...formData.personalInfo, phone },
                       })
                     }
-                    placeholder="+1 (555) 000-0000"
-                    className="h-12"
+                    inputProps={{
+                      id: 'phone',
+                      required: true,
+                    }}
+                    containerClass="w-full"
+                    buttonClass="hover:bg-transparent"
                   />
                 </div>
               </div>
@@ -331,7 +406,9 @@ export default function OnboardingPage() {
             {currentStep === 2 && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="companyName">Company Name</Label>
+                  <Label htmlFor="companyName">
+                    Company Name <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="companyName"
                     value={formData.companyInfo.companyName}
@@ -346,7 +423,9 @@ export default function OnboardingPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="website">Website</Label>
+                  <Label htmlFor="website">
+                    Website <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="website"
                     value={formData.companyInfo.website}
@@ -360,9 +439,6 @@ export default function OnboardingPage() {
                     className="h-12"
                   />
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Company details are optional but help personalize your proposals.
-                </p>
               </div>
             )}
 
@@ -385,9 +461,17 @@ export default function OnboardingPage() {
                     placeholder="e.g. Fullstack Developer"
                     className="h-12"
                   />
+                  <p className="text-xs text-muted-foreground">Minimum 8 characters</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="bio">Professional Bio</Label>
+                  <div className="flex justify-between items-end">
+                    <Label htmlFor="bio">
+                      Professional Bio <span className="text-destructive">*</span>
+                    </Label>
+                    <span className={`text-[10px] ${countWords(formData.professionalInfo.bio) >= 30 ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+                      {countWords(formData.professionalInfo.bio)} / 30 words
+                    </span>
+                  </div>
                   <textarea
                     id="bio"
                     value={formData.professionalInfo.bio}
@@ -400,10 +484,12 @@ export default function OnboardingPage() {
                     placeholder="Describe your expertise, values, and what clients love about working with you..."
                     className="flex min-h-[150px] w-full rounded-xl border border-input bg-background px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary/50 transition-all"
                   />
-                  <p className="text-xs text-muted-foreground">Minimum 50 characters recommended</p>
+                  <p className="text-xs text-muted-foreground">Tell your story to attract high-paying clients (Min 30 words)</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="experience">Experience Level</Label>
+                  <Label htmlFor="experience">
+                    Experience Level <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="experience"
                     value={formData.professionalInfo.experience}
@@ -424,7 +510,9 @@ export default function OnboardingPage() {
             {currentStep === 4 && (
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="skills">Skills (Comma separated)</Label>
+                  <Label htmlFor="skills">
+                    Skills <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="skills"
                     value={skillsInput}
@@ -432,15 +520,15 @@ export default function OnboardingPage() {
                     placeholder="React, AWS, Branding, Figma"
                     className="h-12"
                   />
-                  <p className="text-xs text-muted-foreground">Add at least 3 skills</p>
+                  <p className="text-xs text-muted-foreground">Comma separated, add at least 3 skills</p>
                 </div>
 
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label className="text-base">Portfolio Projects</Label>
+                      <Label className="text-base">Portfolio Projects <span className="text-destructive">*</span></Label>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Add at least 1 project to unlock proposal generation
+                        Add at least 1 detailed project
                       </p>
                     </div>
                     <Button type="button" size="sm" variant="outline" onClick={addProject}>
@@ -450,42 +538,55 @@ export default function OnboardingPage() {
 
                   {formData.projects.length === 0 ? (
                     <div className="p-6 border-2 border-dashed border-border rounded-xl text-center">
-                      <p className="text-sm text-muted-foreground">
-                        No projects added yet. Click "Add Project" to get started.
+                      <p className="text-sm text-destructive font-medium">
+                        At least one project is required to proceed.
                       </p>
                     </div>
                   ) : (
                     <div className="space-y-4">
                       {formData.projects.map((project, index) => (
-                        <div key={index} className="p-4 bg-muted/50 border border-border rounded-xl space-y-4">
+                        <div key={index} className="p-4 bg-muted/50 border border-border rounded-xl space-y-4 shadow-inner">
                           <div className="flex items-center justify-between">
                             <Label className="text-sm font-semibold">Project {index + 1}</Label>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => removeProject(index)}
-                              className="bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 h-9 font-bold transition-all shadow-sm shadow-red-900/20 m-0"
-                            >
-                              Remove
-                            </Button>
+                            {formData.projects.length > 1 && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => removeProject(index)}
+                                className="bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 h-9 font-bold transition-all shadow-sm shadow-red-900/20 m-0"
+                              >
+                                Remove
+                              </Button>
+                            )}
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm">Project Title</Label>
+                            <Label className="text-sm">
+                              Project Title <span className="text-destructive">*</span>
+                            </Label>
                             <Input
                               value={project.title}
                               onChange={(e) => updateProject(index, 'title', e.target.value)}
                               placeholder="e.g. E-commerce Platform Redesign"
                             />
+                            <p className="text-[10px] text-muted-foreground">Minimum 8 characters</p>
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm">Project Description</Label>
+                            <div className="flex justify-between items-end">
+                              <Label className="text-sm">
+                                Project Description <span className="text-destructive">*</span>
+                              </Label>
+                              <span className={`text-[10px] ${countWords(project.description) >= 30 ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+                                {countWords(project.description)} / 30 words
+                              </span>
+                            </div>
                             <textarea
                               value={project.description}
                               onChange={(e) => updateProject(index, 'description', e.target.value)}
                               placeholder="Describe the project, your role, technologies used, and the impact..."
-                              className="flex min-h-[100px] w-full rounded-xl border border-input bg-background px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary/50 transition-all"
+                              className="flex min-h-[100px] w-full rounded-xl border border-input bg-background px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary/50 transition-all font-sans"
                             />
+                            <p className="text-[10px] text-muted-foreground">Minimum 30 words required</p>
                           </div>
                         </div>
                       ))}
@@ -494,6 +595,7 @@ export default function OnboardingPage() {
                 </div>
               </div>
             )}
+
 
             {/* Step 5: Review & Finish */}
             {currentStep === 5 && (
