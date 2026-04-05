@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import api from '@/lib/axios';
-import { toast } from 'react-toastify';
+import { showToast } from '@/lib/toast';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, Copy, Check, Download, FileText, Sparkles, PenLine, Save, X, Loader2, Lock, RefreshCw } from 'lucide-react';
@@ -54,10 +54,10 @@ export default function ViewProposalPage() {
         generatedText: editedText
       });
       setProposal(response.data.data);
-      toast.success('Changes saved successfully');
+      showToast.success('Changes saved successfully');
       setIsEditing(false);
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to save changes');
+      showToast.apiError(err, 'Failed to save changes');
     } finally {
       setSaving(false);
     }

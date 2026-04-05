@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { ProposalGeneratingSkeleton } from '@/components/ProposalGeneratingSkeleton';
 import { Sparkles, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { showToast } from '@/lib/toast';
 
 const AI_STATUS_STEPS = [
   "Analyzing client requirements...",
@@ -62,6 +63,8 @@ export default function GeneratingProposalPage() {
 
         // Clear the temp data
         sessionStorage.removeItem('proposalFormData');
+
+        showToast.success('Proposal generated successfully!');
 
         // Auto-redirect to the generated proposal
         router.replace(`/dashboard/proposals/${response.data.data._id}`);

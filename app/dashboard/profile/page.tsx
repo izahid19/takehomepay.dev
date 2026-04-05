@@ -7,21 +7,24 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Save, Zap, Crown, User as UserIcon } from 'lucide-react';
 import { ProfileCompletionBar } from '@/components/ProfileCompletionBar';
 import { MissingFieldsList, ProfileData } from '@/components/MissingFieldsList';
+import { showToast } from '@/lib/toast';
+
+const SOCIAL_PLATFORMS = ['Portfolio', 'LinkedIn', 'Twitter', 'GitHub', 'Other', 'Custom'];
+const MULTIPLE_ALLOWED = ['Other', 'Custom'];
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [initialValues, setInitialValues] = useState<{ formData: any; skillsInput: string } | null>(null);
 
   const [formData, setFormData] = useState({
-    personalInfo: { firstName: '', lastName: '', phone: '' },
+    personalInfo: { firstName: '', lastName: '', phone: '', socials: [] as Array<{ platform: string; url: string; customName?: string }> },
     companyInfo: { companyName: '', website: '' },
     professionalInfo: { 
       jobTitle: '', 
@@ -41,22 +44,40 @@ export default function ProfilePage() {
         if (response.data.data) {
           const profile = response.data.data;
           setProfileData(profile);
+          const cleanProjects = (profile.professionalInfo?.projects || []).map((p: any) => ({
+            title: p.title || '',
+            description: p.description || ''
+          }));
+          const cleanSocials = (profile.personalInfo?.socials || []).map((s: any) => ({
+            platform: s.platform || 'LinkedIn',
+            url: s.url || '',
+            customName: s.customName || ''
+          }));
+
           const initialData = {
-            personalInfo: profile.personalInfo || { firstName: '', lastName: '', phone: '' },
-            companyInfo: profile.companyInfo || { companyName: '', website: '' },
+            personalInfo: {
+              firstName: profile.personalInfo?.firstName || '',
+              lastName: profile.personalInfo?.lastName || '',
+              phone: profile.personalInfo?.phone || '',
+              socials: cleanSocials
+            },
+            companyInfo: {
+              companyName: profile.companyInfo?.companyName || '',
+              website: profile.companyInfo?.website || ''
+            },
             professionalInfo: {
               jobTitle: profile.professionalInfo?.jobTitle || '',
               bio: profile.professionalInfo?.bio || '',
               experience: profile.professionalInfo?.experience || '',
               skills: profile.professionalInfo?.skills || [],
-              projects: profile.professionalInfo?.projects || []
+              projects: cleanProjects
             },
           };
           const initialSkills = profile.professionalInfo?.skills?.join(', ') || '';
           
           setFormData(initialData);
           setSkillsInput(initialSkills);
-          setInitialValues({ formData: initialData, skillsInput: initialSkills });
+          setInitialValues({ formData: JSON.parse(JSON.stringify(initialData)), skillsInput: initialSkills });
         }
       } catch (err) {
         console.error('Failed to fetch profile', err);
@@ -70,8 +91,6 @@ export default function ProfilePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    setSuccess(false);
 
     try {
       const skillsArray = skillsInput.split(',').map(s => s.trim()).filter(s => s !== '');
@@ -83,24 +102,42 @@ export default function ProfilePage() {
       const updatedProfile = response.data.data;
       setProfileData(updatedProfile);
       
+      const cleanProjects = (updatedProfile.professionalInfo?.projects || []).map((p: any) => ({
+        title: p.title || '',
+        description: p.description || ''
+      }));
+      const cleanSocials = (updatedProfile.personalInfo?.socials || []).map((s: any) => ({
+        platform: s.platform || 'LinkedIn',
+        url: s.url || '',
+        customName: s.customName || ''
+      }));
+
       const newInitialData = {
-        personalInfo: updatedProfile.personalInfo || { firstName: '', lastName: '', phone: '' },
-        companyInfo: updatedProfile.companyInfo || { companyName: '', website: '' },
+        personalInfo: {
+          firstName: updatedProfile.personalInfo?.firstName || '',
+          lastName: updatedProfile.personalInfo?.lastName || '',
+          phone: updatedProfile.personalInfo?.phone || '',
+          socials: cleanSocials
+        },
+        companyInfo: {
+          companyName: updatedProfile.companyInfo?.companyName || '',
+          website: updatedProfile.companyInfo?.website || ''
+        },
         professionalInfo: {
           jobTitle: updatedProfile.professionalInfo?.jobTitle || '',
           bio: updatedProfile.professionalInfo?.bio || '',
           experience: updatedProfile.professionalInfo?.experience || '',
           skills: updatedProfile.professionalInfo?.skills || [],
-          projects: updatedProfile.professionalInfo?.projects || []
+          projects: cleanProjects
         },
       };
       const newInitialSkills = updatedProfile.professionalInfo?.skills?.join(', ') || '';
       
-      setInitialValues({ formData: newInitialData, skillsInput: newInitialSkills });
-      setSuccess(true);
+      setInitialValues({ formData: JSON.parse(JSON.stringify(newInitialData)), skillsInput: newInitialSkills });
+      showToast.success('Profile updated successfully!');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update profile');
+      showToast.apiError(err, 'Failed to update profile');
     } finally {
       setLoading(false);
     }
@@ -180,18 +217,6 @@ export default function ProfilePage() {
       <MissingFieldsList profile={profileData} variant="default" />
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        {success && (
-          <div className="p-4 bg-primary/10 border border-primary/20 text-primary rounded-xl font-medium animate-in fade-in slide-in-from-top-2">
-            Profile updated successfully!
-          </div>
-        )}
-        
-        {error && (
-          <div className="p-4 bg-destructive/10 border border-destructive/20 text-destructive-foreground rounded-xl font-medium">
-            {error}
-          </div>
-        )}
-
         <div className="space-y-6">
           {/* Contact Information */}
           <Card className="bg-card/40 backdrop-blur-md border-border shadow-xl">
@@ -231,6 +256,117 @@ export default function ProfilePage() {
                   placeholder="+1 (555) 000-0000"
                   className="h-12 bg-background/50"
                 />
+              </div>
+
+              {/* Social Links Section */}
+              <div className="space-y-4 pt-6 border-t border-border/50">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <Label className="text-base">Social Links</Label>
+                    <p className="text-xs text-muted-foreground mt-1">Add your portfolio, LinkedIn, Twitter, GitHub, etc.</p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const usedPlatforms = formData.personalInfo.socials.map(s => s.platform);
+                      const availableOption = SOCIAL_PLATFORMS.find(p => MULTIPLE_ALLOWED.includes(p) || !usedPlatforms.includes(p)) || 'Other';
+                      const newSocials = [...formData.personalInfo.socials, { platform: availableOption, url: '', customName: '' }];
+                      setFormData({...formData, personalInfo: {...formData.personalInfo, socials: newSocials}});
+                    }}
+                    className="border-primary/30 text-primary hover:bg-primary/10 self-start sm:self-auto"
+                  >
+                    + Add Link
+                  </Button>
+                </div>
+
+                {formData.personalInfo.socials.length === 0 ? (
+                  <div className="p-6 border-2 border-dashed border-border/50 rounded-xl text-center">
+                    <p className="text-sm text-muted-foreground">No social links added yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {formData.personalInfo.socials.map((social, index) => {
+                      const usedPlatforms = formData.personalInfo.socials
+                        .map(s => s.platform)
+                        .filter(p => !MULTIPLE_ALLOWED.includes(p));
+
+                      const availableOptions = SOCIAL_PLATFORMS.filter(
+                        p => MULTIPLE_ALLOWED.includes(p) || !usedPlatforms.includes(p) || p === social.platform
+                      );
+
+                      return (
+                      <div key={index} className="flex flex-col md:flex-row gap-4 items-end bg-background/30 p-4 rounded-xl border border-border/50 relative group">
+                        <div className="space-y-2 w-full md:w-1/3">
+                          <Label className="text-sm">Platform</Label>
+                          <Select
+                            value={social.platform}
+                            disabled={social.url.trim().length > 0}
+                            onValueChange={(value) => {
+                              const newSocials = formData.personalInfo.socials.map((s, i) => 
+                                i === index ? { ...s, platform: value, customName: value !== 'Custom' ? '' : s.customName } : s
+                              );
+                              setFormData({...formData, personalInfo: {...formData.personalInfo, socials: newSocials}});
+                            }}
+                          >
+                            <SelectTrigger className="h-12 bg-background/50 border-input disabled:opacity-50">
+                              <SelectValue placeholder="Select platform" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableOptions.map(opt => (
+                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {social.platform === 'Custom' && (
+                          <div className="space-y-2 w-full md:w-1/3">
+                            <Label className="text-sm">Custom Name</Label>
+                            <Input
+                              value={social.customName}
+                              onChange={(e) => {
+                                const newSocials = formData.personalInfo.socials.map((s, i) => 
+                                  i === index ? { ...s, customName: e.target.value } : s
+                                );
+                                setFormData({...formData, personalInfo: {...formData.personalInfo, socials: newSocials}});
+                              }}
+                              placeholder="Platform name"
+                              className="h-12 bg-background/50"
+                            />
+                          </div>
+                        )}
+                        <div className="space-y-2 w-full md:flex-grow">
+                          <Label className="text-sm">URL</Label>
+                          <Input
+                            value={social.url}
+                            onChange={(e) => {
+                              const newSocials = formData.personalInfo.socials.map((s, i) => 
+                                i === index ? { ...s, url: e.target.value } : s
+                              );
+                              setFormData({...formData, personalInfo: {...formData.personalInfo, socials: newSocials}});
+                            }}
+                            placeholder="https://"
+                            className="h-12 bg-background/50"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => {
+                            const newSocials = formData.personalInfo.socials.filter((_, i) => i !== index);
+                            setFormData({...formData, personalInfo: {...formData.personalInfo, socials: newSocials}});
+                          }}
+                          className="absolute top-2 right-2 md:relative md:top-auto md:right-auto md:h-12 md:w-12 h-8 w-8 text-red-500 md:opacity-0 group-hover:opacity-100 md:bg-transparent bg-red-500/10 md:hover:bg-red-500/10 hover:bg-red-500/20 rounded-lg flex-shrink-0 transition-opacity flex items-center justify-center p-0"
+                          title="Remove"
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -365,8 +501,9 @@ export default function ProfilePage() {
                           <Input
                             value={project.title}
                             onChange={e => {
-                              const newProjects = [...formData.professionalInfo.projects];
-                              newProjects[index].title = e.target.value;
+                              const newProjects = formData.professionalInfo.projects.map((p, i) => 
+                                i === index ? { ...p, title: e.target.value } : p
+                              );
                               setFormData({...formData, professionalInfo: {...formData.professionalInfo, projects: newProjects}});
                             }}
                             placeholder="e.g. E-commerce Platform Redesign"
@@ -378,8 +515,9 @@ export default function ProfilePage() {
                           <textarea
                             value={project.description}
                             onChange={e => {
-                              const newProjects = [...formData.professionalInfo.projects];
-                              newProjects[index].description = e.target.value;
+                              const newProjects = formData.professionalInfo.projects.map((p, i) => 
+                                i === index ? { ...p, description: e.target.value } : p
+                              );
                               setFormData({...formData, professionalInfo: {...formData.professionalInfo, projects: newProjects}});
                             }}
                             placeholder="Describe the project, your role, technologies used, and the impact..."

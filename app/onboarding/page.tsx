@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
+import { showToast } from '@/lib/toast';
 
 const STEPS = [
   { id: 1, title: 'Personal Info', icon: User, description: 'Tell us about yourself' },
@@ -131,8 +132,9 @@ export default function OnboardingPage() {
         setProfileCompletion(response.data.data.professionalInfo.profileCompletion);
       }
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to save profile', err);
+      showToast.apiError(err, 'Failed to save profile step. Please try again.');
       return false;
     } finally {
       setSaving(false);
@@ -160,6 +162,7 @@ export default function OnboardingPage() {
   const handleFinish = async () => {
     const saved = await saveStep();
     if (saved) {
+      showToast.success('Onboarding complete! Welcome to Pitchdown.');
       if (profileCompletion >= 80) {
         router.push('/dashboard/proposals/new');
       } else {
