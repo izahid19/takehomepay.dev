@@ -137,6 +137,16 @@ export interface ResumeContent {
   technicalSkills: ResumeTechnicalSkills;
 }
 
+// ── Email Draft Types ─────────────────────────────
+
+export interface EmailDraft {
+  subject: string;
+  greeting: string;
+  body: string[];
+  closing: string;
+  signature: string;
+}
+
 export interface ResumeRecord {
   _id: string;
   user: string;
@@ -145,9 +155,11 @@ export interface ResumeRecord {
   prevResumeContent: ResumeContent | null;
   newResumeContent: ResumeContent | null;
   analysis: ResumeAnalysis | null;
+  emailDraft: EmailDraft | null;
   status: 'SAVED' | 'GENERATING' | 'SUCCESS' | 'FAILED';
   analysisStatus: 'IDLE' | 'GENERATING' | 'SUCCESS' | 'FAILED';
   resumeStatus: 'IDLE' | 'GENERATING' | 'SUCCESS' | 'FAILED';
+  emailDraftStatus: 'IDLE' | 'GENERATING' | 'SUCCESS' | 'FAILED';
   error: string | null;
   createdAt: string;
   updatedAt: string;
@@ -282,4 +294,20 @@ export async function downloadResumeBlobApi(id: string): Promise<Blob> {
  */
 export async function deleteResumeApi(id: string): Promise<void> {
   await api.delete(`/resume/${id}`);
+}
+
+/**
+ * POST /resume/:id/generate-email
+ * Generates a professional email draft using JD + resume content.
+ */
+export async function generateEmailDraftApi(
+  id: string,
+  resumeText?: string
+): Promise<ResumeRecord> {
+  const response = await api.post<{ status: string; data: ResumeRecord }>(
+    `/resume/${id}/generate-email`,
+    { resumeText },
+    { timeout: 120_000 }
+  );
+  return response.data.data;
 }

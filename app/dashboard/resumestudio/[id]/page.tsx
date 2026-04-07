@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Sparkles, BarChart3, FileText, Loader2, AlertCircle,
-  CheckCircle2, Download, Trash2, ChevronRight, Zap, Target, Clock,
+  CheckCircle2, Download, Trash2, ChevronRight, Zap, Target, Clock, Mail,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -173,6 +173,8 @@ export default function ResumeProjectPage() {
   const resumeStatus = record?.resumeStatus || 'IDLE';
   const hasAnalysis = !!record?.analysis;
   const hasGeneratedResume = !!record?.newResumeContent;
+  const emailDraftStatus = record?.emailDraftStatus || 'IDLE';
+  const hasEmailDraft = !!record?.emailDraft;
 
   const handleAnalyze = () => {
     if (!hasResume) {
@@ -449,177 +451,209 @@ export default function ResumeProjectPage() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="space-y-5"
+            className="grid grid-cols-1 md:grid-cols-2 gap-5"
           >
             {/* ── ANALYSIS CARD ── */}
             <div className={cn(
-              'group relative bg-card/60 backdrop-blur-sm rounded-2xl border overflow-hidden transition-all duration-300 shadow-2xl hover:-translate-y-1',
-              hasAnalysis
-                ? 'border-blue-500/20 hover:border-blue-500/40 hover:shadow-blue-500/5'
-                : 'border-border hover:border-zinc-700'
+              'bg-card/60 backdrop-blur-sm border rounded-2xl p-5 shadow-xl transition-colors group flex flex-col gap-4',
+              hasAnalysis ? 'border-blue-500/20 hover:border-blue-500/40' : 'border-border hover:border-zinc-700'
             )}>
-              {/* Blue gradient accent top bar */}
-              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/0 to-transparent group-hover:via-blue-500/40 transition-all duration-500" />
-
-              <div className="p-7">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 shrink-0 group-hover:bg-blue-500/15 transition-colors">
-                      <BarChart3 className="w-5 h-5 text-blue-400" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-white text-lg">{hasAnalysis ? 'Resume Analysis' : 'Resume Analysis'}</h3>
-                        {hasAnalysis && record.analysis && (
-                          <span className="text-[10px] font-black px-2.5 py-1 rounded-full border text-blue-400 bg-blue-500/10 border-blue-500/20 uppercase tracking-wider">
-                            {record.analysis.score}% Match
-                          </span>
-                        )}
-                        {analysisStatus === 'FAILED' && (
-                          <span className="text-[10px] font-black px-2.5 py-1 rounded-full border text-red-400 bg-red-500/10 border-red-500/20 uppercase tracking-wider">
-                            Failed
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-zinc-500 leading-relaxed font-medium">
-                        AI-powered match score, skill gap analysis, strengths, and actionable improvements tailored to this job description.
-                      </p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2.5 bg-zinc-900 rounded-xl group-hover:bg-blue-500/10 transition-colors shrink-0">
+                    <BarChart3 className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white truncate">Resume Analysis</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {hasAnalysis && record.analysis && (
+                        <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">
+                          {record.analysis.score}% Match
+                        </span>
+                      )}
+                      {analysisStatus === 'FAILED' && (
+                        <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider">Failed</span>
+                      )}
+                      {!hasAnalysis && analysisStatus !== 'FAILED' && (
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Not Generated</span>
+                      )}
                     </div>
                   </div>
-
-                  {hasAnalysis && (
-                    <Link href={`/dashboard/resumestudio/${id}/analysis`}>
-                      <ChevronRight className="w-5 h-5 text-zinc-600 hover:text-blue-400 transition-colors shrink-0 mt-1" />
-                    </Link>
-                  )}
                 </div>
+              </div>
 
-                {/* Action area */}
-                <div className="mt-6">
-                  {hasAnalysis ? (
-                    <div className="flex gap-3">
-                      <Link
-                        href={`/dashboard/resumestudio/${id}/analysis`}
-                        className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 transition-all"
-                      >
-                        <BarChart3 className="w-4 h-4" />
-                        View Analysis Report
-                      </Link>
-                      <button
-                        onClick={() => setRegenerateTarget('analysis')}
-                        title="Regenerate Analysis"
-                        className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl font-bold text-sm border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 text-zinc-300 transition-all shrink-0"
-                      >
-                        <Zap className="w-4 h-4" />
-                        Regenerate
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handleAnalyze}
-                      disabled={!hasResume}
-                      className={cn(
-                        'w-full py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition-all',
-                        hasResume
-                          ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-black shadow-lg shadow-blue-500/20 hover:brightness-105'
-                          : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
-                      )}
+              <p className="text-xs text-zinc-500 leading-relaxed font-medium">
+                AI-powered match score, skill gap analysis, strengths, and actionable improvements tailored to this job description.
+              </p>
+
+              <div className="flex gap-2 mt-auto">
+                {hasAnalysis ? (
+                  <>
+                    <Link
+                      href={`/dashboard/resumestudio/${id}/analysis`}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 rounded-xl transition-all"
                     >
-                      <Zap className="w-4 h-4" />
-                      Generate Analysis
+                      <BarChart3 className="w-3.5 h-3.5" />
+                      View Report
+                    </Link>
+                    <button
+                      onClick={() => setRegenerateTarget('analysis')}
+                      title="Regenerate Analysis"
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-black bg-gradient-to-r from-blue-500 to-cyan-400 hover:brightness-105 rounded-xl transition-all"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      Regenerate
                     </button>
-                  )}
-                </div>
+                  </>
+                ) : (
+                  <button
+                    onClick={handleAnalyze}
+                    disabled={!hasResume}
+                    className={cn(
+                      'w-full flex items-center justify-center gap-1.5 py-2 flex-1 text-[11px] sm:text-xs font-bold rounded-xl transition-all',
+                      hasResume
+                        ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-black hover:brightness-105 shadow-lg shadow-blue-500/20'
+                        : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
+                    )}
+                  >
+                    <Zap className="w-3.5 h-3.5" />
+                    Generate Analysis
+                  </button>
+                )}
               </div>
             </div>
 
             {/* ── ATS RESUME CARD ── */}
             <div className={cn(
-              'group relative bg-card/60 backdrop-blur-sm rounded-2xl border overflow-hidden transition-all duration-300 shadow-2xl hover:-translate-y-1',
-              hasGeneratedResume
-                ? 'border-emerald-500/20 hover:border-emerald-500/40 hover:shadow-emerald-500/5'
-                : 'border-border hover:border-zinc-700'
+              'bg-card/60 backdrop-blur-sm border rounded-2xl p-5 shadow-xl transition-colors group flex flex-col gap-4',
+              hasGeneratedResume ? 'border-emerald-500/20 hover:border-emerald-500/40' : 'border-border hover:border-zinc-700'
             )}>
-              {/* Green gradient accent top bar */}
-              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/0 to-transparent group-hover:via-emerald-500/40 transition-all duration-500" />
-
-              <div className="p-7">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 shrink-0 group-hover:bg-emerald-500/15 transition-colors">
-                      <Sparkles className="w-5 h-5 text-emerald-500" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-white text-lg">ATS-Optimized Resume</h3>
-                        {hasGeneratedResume && (
-                          <span className="text-[10px] font-black px-2.5 py-1 rounded-full border text-emerald-400 bg-emerald-500/10 border-emerald-500/20 uppercase tracking-wider">
-                            Ready
-                          </span>
-                        )}
-                        {resumeStatus === 'FAILED' && (
-                          <span className="text-[10px] font-black px-2.5 py-1 rounded-full border text-red-400 bg-red-500/10 border-red-500/20 uppercase tracking-wider">
-                            Failed
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-zinc-500 leading-relaxed font-medium">
-                        Your resume rewritten by DeepSeek R1 reasoning model — tailored for ATS systems and the specific role. Download as PDF.
-                      </p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2.5 bg-zinc-900 rounded-xl group-hover:bg-emerald-500/10 transition-colors shrink-0">
+                    <Sparkles className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white truncate">ATS-Optimized Resume</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {hasGeneratedResume && (
+                        <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">
+                          Ready
+                        </span>
+                      )}
+                      {resumeStatus === 'FAILED' && (
+                        <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider">Failed</span>
+                      )}
+                      {!hasGeneratedResume && resumeStatus !== 'FAILED' && (
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Not Generated</span>
+                      )}
                     </div>
                   </div>
-
-                  {hasGeneratedResume && (
-                    <Link href={`/dashboard/resumestudio/${id}/generated`}>
-                      <ChevronRight className="w-5 h-5 text-zinc-600 hover:text-emerald-400 transition-colors shrink-0 mt-1" />
-                    </Link>
-                  )}
                 </div>
+              </div>
 
-                {/* Action area */}
-                <div className="mt-6">
-                  {hasGeneratedResume ? (
-                    <div className="flex gap-3">
-                      <button
-                        onClick={handleDownload}
-                        disabled={isDownloading}
-                        className="flex-[2] flex items-center justify-center gap-2 py-3.5 rounded-xl font-extrabold text-sm bg-gradient-to-r from-emerald-500 to-teal-500 text-black hover:brightness-105 transition-all disabled:opacity-60 shadow-lg shadow-emerald-500/20"
-                      >
-                        {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                        {isDownloading ? 'Downloading...' : 'Download PDF'}
-                      </button>
-                      <Link
-                        href={`/dashboard/resumestudio/${id}/generated`}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl font-bold text-sm border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 text-zinc-300 transition-all"
-                      >
-                        <Target className="w-4 h-4" />
-                        Edit
-                      </Link>
-                      <button
-                        onClick={() => setRegenerateTarget('resume')}
-                        title="Regenerate ATS Resume"
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl font-bold text-sm border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 text-zinc-300 transition-all"
-                      >
-                        <Zap className="w-4 h-4" />
-                        Regenerate
-                      </button>
-                    </div>
-                  ) : (
+              <p className="text-xs text-zinc-500 leading-relaxed font-medium">
+                Your resume rewritten by DeepSeek R1 reasoning model — tailored for ATS systems. Download as PDF.
+              </p>
+
+              <div className="flex gap-2 mt-auto">
+                {hasGeneratedResume ? (
+                  <>
                     <button
-                      onClick={handleGenerateResume}
-                      disabled={!hasResume}
-                      className={cn(
-                        'w-full py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition-all',
-                        hasResume
-                          ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-black shadow-lg shadow-emerald-500/20 hover:brightness-105'
-                          : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
-                      )}
+                      onClick={handleDownload}
+                      disabled={isDownloading}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-black bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-105 rounded-xl transition-all disabled:opacity-60"
                     >
-                      <Zap className="w-4 h-4" />
-                      Generate ATS Resume
+                      {isDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                      PDF
                     </button>
-                  )}
+                    <Link
+                      href={`/dashboard/resumestudio/${id}/generated`}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 rounded-xl transition-all"
+                    >
+                      <Target className="w-3.5 h-3.5" />
+                      Edit
+                    </Link>
+                    <button
+                      onClick={() => setRegenerateTarget('resume')}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-black bg-gradient-to-r from-amber-500 to-orange-400 hover:brightness-105 rounded-xl transition-all"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      Remake
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={handleGenerateResume}
+                    disabled={!hasResume}
+                    className={cn(
+                      'w-full flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-xl transition-all',
+                      hasResume
+                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-black shadow-lg shadow-emerald-500/20 hover:brightness-105'
+                        : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
+                    )}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Generate Tailored Resume
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* ── EMAIL DRAFT CARD ── */}
+            <div className={cn(
+              'bg-card/60 backdrop-blur-sm border rounded-2xl p-5 shadow-xl transition-colors group flex flex-col gap-4 md:col-span-2',
+              hasEmailDraft ? 'border-violet-500/20 hover:border-violet-500/40' : 'border-border hover:border-zinc-700'
+            )}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2.5 bg-zinc-900 rounded-xl group-hover:bg-violet-500/10 transition-colors shrink-0">
+                    <Mail className="w-5 h-5 text-violet-500" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white truncate">Application Email</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {hasEmailDraft && (
+                        <span className="text-[10px] font-bold text-violet-500 uppercase tracking-wider">
+                          Ready
+                        </span>
+                      )}
+                      {emailDraftStatus === 'FAILED' && (
+                        <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider">Failed</span>
+                      )}
+                      {!hasEmailDraft && emailDraftStatus !== 'FAILED' && (
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Not Generated</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
+              </div>
+
+              <p className="text-xs text-zinc-500 leading-relaxed font-medium">
+                AI-crafted application email using your resume and job description. Ready to copy and send.
+              </p>
+
+              <div className="flex gap-2 mt-auto">
+                {hasEmailDraft ? (
+                    <Link
+                      href={`/dashboard/resumestudio/${id}/emaildraft`}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 rounded-xl transition-all"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      View Email
+                    </Link>
+                ) : (
+                  <Link
+                    href={`/dashboard/resumestudio/${id}/emaildraft`}
+                    className={cn(
+                      'w-full flex items-center justify-center gap-1.5 py-2 flex-1 text-[11px] sm:text-xs font-bold rounded-xl transition-all',
+                      'bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-lg shadow-violet-500/20 hover:brightness-105'
+                    )}
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    Generate Email Draft
+                  </Link>
+                )}
               </div>
             </div>
           </motion.div>
