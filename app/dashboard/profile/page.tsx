@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import api from '@/lib/axios';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -8,20 +9,24 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Save, Zap, Crown, User as UserIcon } from 'lucide-react';
+import { Loader2, Save, Zap, Crown, User as UserIcon, UploadCloud, FileText, Trash2, Pencil } from 'lucide-react';
 import { ProfileCompletionBar } from '@/components/ProfileCompletionBar';
 import { MissingFieldsList, ProfileData } from '@/components/MissingFieldsList';
 import { showToast } from '@/lib/toast';
-
+import { motion, AnimatePresence } from 'framer-motion';
 const SOCIAL_PLATFORMS = ['Portfolio', 'LinkedIn', 'Twitter', 'GitHub', 'Other', 'Custom'];
 const MULTIPLE_ALLOWED = ['Other', 'Custom'];
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [initialValues, setInitialValues] = useState<{ formData: any; skillsInput: string } | null>(null);
+  
+  const [isUploadingResume, setIsUploadingResume] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     personalInfo: { firstName: '', lastName: '', phone: '', socials: [] as Array<{ platform: string; url: string; customName?: string }> },
@@ -87,6 +92,52 @@ export default function ProfilePage() {
     };
     fetchProfile();
   }, []);
+
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const uploadedData = new FormData();
+    uploadedData.append('resume', file);
+
+    setIsUploadingResume(true);
+    try {
+      const res = await api.post('/profile/resume', uploadedData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120_000, // AI parsing can take up to 2min
+      });
+      const resumeDoc = res.data.data;
+      showToast.success('Resume uploaded & parsed!');
+      // Navigate to the resume editor with the new resume ID
+      if (resumeDoc?._id || resumeDoc?.id) {
+        router.push(`/dashboard/profile/resume/${resumeDoc._id || resumeDoc.id}`);
+      } else {
+        // Fallback: refresh profile data
+        const profileRes = await api.get('/profile');
+        setProfileData(profileRes.data.data);
+      }
+    } catch (err: any) {
+      showToast.apiError(err, 'Failed to upload resume');
+    } finally {
+      setIsUploadingResume(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleResumeDelete = async () => {
+    setIsUploadingResume(true);
+    try {
+      const res = await api.delete('/profile/resume');
+      setProfileData(res.data.data);
+      showToast.success('Resume deleted successfully!');
+    } catch (err: any) {
+      showToast.apiError(err, 'Failed to delete resume');
+    } finally {
+      setIsUploadingResume(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -256,6 +307,122 @@ export default function ProfilePage() {
                   placeholder="+1 (555) 000-0000"
                   className="h-12 bg-background/50"
                 />
+              </div>
+              
+              {/* Resume Upload Section */}
+              <div className="space-y-4 pt-6 border-t border-border/50">
+                <div>
+                  <Label className="text-base">My Resume</Label>
+                  <p className="text-xs text-muted-foreground mt-1">Upload your resume to share your background with clients.</p>
+                </div>
+                
+                <div className="relative">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleResumeUpload}
+                    accept=".pdf,.doc,.docx"
+                    className="hidden"
+                  />
+                  
+                  <AnimatePresence mode="wait">
+                    {isUploadingResume ? (
+                      <motion.div 
+                        key="uploading"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="p-8 border-2 border-dashed border-border/50 rounded-xl flex items-center justify-center flex-col gap-3 bg-muted/20"
+                      >
+                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        <p className="text-sm font-medium animate-pulse text-muted-foreground">Processing resume with AI...</p>
+                        <div className="w-full max-w-xs h-1.5 bg-muted mt-2 rounded-full overflow-hidden relative">
+                          <motion.div 
+                            className="absolute top-0 left-0 bottom-0 bg-primary"
+                            initial={{ width: "0%" }}
+                            animate={{ width: "100%" }}
+                            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                          />
+                        </div>
+                      </motion.div>
+                    ) : profileData?.resume?.rawText ? (
+                      <motion.div 
+                        key="uploaded"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-5 border border-primary/20 bg-primary/5 rounded-xl flex items-center justify-between group transition-all hover:bg-primary/10"
+                      >
+                        <div className="flex items-center gap-4 overflow-hidden">
+                          <div className="p-3 bg-primary/10 rounded-lg shrink-0">
+                            <FileText className="w-6 h-6 text-primary" />
+                          </div>
+                          <div className="truncate pr-4">
+                            <p className="text-sm font-semibold text-foreground truncate">{profileData.resume.fileName}</p>
+                            <p className="text-xs text-primary font-medium">AI Parsed ✓ — Ready for Resume Studio</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Button 
+                            type="button"
+                            variant="default"
+                            size="sm"
+                            onClick={async () => {
+                              // Find the user's base resume to navigate to the editor
+                              try {
+                                const resumeRes = await api.get('/resumes');
+                                const resumes = resumeRes.data.data;
+                                if (resumes?.length > 0) {
+                                  router.push(`/dashboard/profile/resume/${resumes[0].id || resumes[0]._id}`);
+                                } else {
+                                  showToast.error('No parsed resume found. Please re-upload.');
+                                }
+                              } catch {
+                                showToast.error('Failed to load resume');
+                              }
+                            }}
+                            className="h-9 px-4 text-xs font-medium gap-1.5 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
+                          >
+                            <Pencil className="w-3.5 h-3.5" /> Edit Resume
+                          </Button>
+                          <Button 
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="h-9 px-4 text-xs font-medium"
+                          >
+                            Re-upload
+                          </Button>
+                          <Button 
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            onClick={handleResumeDelete}
+                            className="h-9 w-9 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="idle"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        whileHover={{ scale: 1.01, borderColor: "rgba(var(--primary), 0.5)", backgroundColor: "rgba(var(--primary), 0.02)" }}
+                        whileTap={{ scale: 0.99 }}
+                        onClick={() => fileInputRef.current?.click()}
+                        className="cursor-pointer p-8 border-2 border-dashed border-border/50 rounded-xl flex items-center justify-center flex-col gap-2 transition-all hover:border-primary/50 group bg-card/50"
+                      >
+                        <div className="p-4 rounded-full bg-muted group-hover:bg-primary/10 transition-colors">
+                          <UploadCloud className="w-8 h-8 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </div>
+                        <p className="font-semibold text-foreground mt-2">Click to upload your resume</p>
+                        <p className="text-xs text-muted-foreground">PDF, DOC, DOCX up to 5MB</p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
 
               {/* Social Links Section */}

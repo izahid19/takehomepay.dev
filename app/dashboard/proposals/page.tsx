@@ -5,7 +5,7 @@ import api from '@/lib/axios';
 import { toast } from 'react-toastify';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { FileText, PlusCircle, Trash2, ArrowRight, Sparkles, Clock, LayoutGrid, List, Search, AlertCircle } from 'lucide-react';
+import { FileText, PlusCircle, Trash2, ArrowRight, Sparkles, Clock, LayoutGrid, List, Search, AlertCircle, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { proposalModeLabels } from '@/types/proposal';
 import {
@@ -94,13 +94,19 @@ export default function ProposalsPage() {
       </div>
 
       <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-black tracking-tight text-white leading-tight">
-            My Proposals
-          </h1>
-          <p className="text-zinc-500 font-medium">
-            Manage and view your generated proposal intelligence.
-          </p>
+        <div className="space-y-4">
+          <Link href="/dashboard" className="inline-flex items-center text-sm font-medium text-zinc-400 hover:text-white transition-colors bg-zinc-900/50 hover:bg-zinc-800 border border-zinc-800 rounded-lg px-3 py-1.5 w-fit">
+            <ArrowLeft className="mr-2 w-4 h-4" />
+            Back to Hub
+          </Link>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-black tracking-tight text-white leading-tight">
+              My Proposals
+            </h1>
+            <p className="text-zinc-500 font-medium">
+              Manage and view your generated proposal intelligence.
+            </p>
+          </div>
         </div>
         
         <div className="flex items-center gap-4">

@@ -23,9 +23,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     // If a regular user tries to access the root /dashboard, send them to their profile or proposals
-    if (!loading && user && user.role !== 'admin' && pathname === '/dashboard') {
-      router.push('/dashboard/proposals');
-    }
+    // REMOVED: Now we show the Dashboard Hub for non-admins instead of redirecting
 
     // If an admin tries to access user-specific pages, send them back to admin dashboard
     if (!loading && user && user.role === 'admin' && (pathname === '/dashboard/proposals' || pathname.startsWith('/dashboard/proposals/new'))) {

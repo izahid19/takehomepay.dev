@@ -18,6 +18,12 @@ export interface ProfileData {
     }>;
     profileCompletion?: number;
   };
+  resume?: {
+    fileName: string;
+    rawText?: string;
+    parsedContent?: any;
+    uploadedAt?: string;
+  };
 }
 
 interface MissingField {

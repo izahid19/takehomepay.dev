@@ -16,10 +16,6 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && user && user.role !== 'admin') {
-      router.push('/dashboard/proposals');
-    }
-
     const fetchStats = async () => {
       try {
         const response = await api.get('/admin/analytics');
@@ -42,7 +38,56 @@ export default function AdminDashboardPage() {
     );
   }
 
-  if (user?.role !== 'admin') return null;
+  if (user?.role !== 'admin') {
+    return (
+      <div className="space-y-8 animate-in fade-in duration-500 pb-20 max-w-5xl mx-auto p-4 md:p-8">
+        <div>
+          <h1 className="text-4xl font-black tracking-tighter text-foreground">Dashboard Hub</h1>
+          <p className="text-muted-foreground mt-2 text-lg">Choose a workspace to get started.</p>
+        </div>
+        
+        <div className="grid md:grid-cols-2 gap-6">
+          <Link href="/dashboard/proposals" className="group h-full">
+            <Card className="h-full border-border bg-card/40 transition-all duration-300 hover:border-primary/50 hover:shadow-2xl hover:-translate-y-1 hover:shadow-primary/10 hover:bg-primary/5">
+              <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+                <div className="p-5 bg-primary/10 rounded-2xl group-hover:bg-primary/20 transition-colors">
+                  <FileText className="w-12 h-12 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold mb-2">Proposal Section</h3>
+                  <p className="text-muted-foreground">Manage, create and track all your AI-generated proposals.</p>
+                </div>
+                <div className="pt-4 mt-auto">
+                    <span className="inline-flex items-center text-sm font-medium text-primary group-hover:underline">
+                      Open Proposals <ArrowRight className="ml-1 w-4 h-4 transition-transform group-hover:translate-x-1" />
+                    </span>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+          
+          <Link href="/dashboard/resumestudio" className="group h-full">
+            <Card className="h-full border-border bg-card/40 transition-all duration-300 hover:border-emerald-500/50 hover:-translate-y-1 hover:shadow-2xl hover:shadow-emerald-500/10 hover:bg-emerald-500/5">
+              <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+                <div className="p-5 bg-emerald-500/10 rounded-2xl group-hover:bg-emerald-500/20 transition-colors">
+                  <Users className="w-12 h-12 text-emerald-500" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold mb-2">Resume Studio</h3>
+                  <p className="text-muted-foreground">Build, optimize, and preview your professional resumes.</p>
+                </div>
+                <div className="pt-4 mt-auto">
+                    <span className="inline-flex items-center text-sm font-medium text-emerald-500 group-hover:underline">
+                      Open Studio <ArrowRight className="ml-1 w-4 h-4 transition-transform group-hover:translate-x-1" />
+                    </span>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">

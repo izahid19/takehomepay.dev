@@ -187,10 +187,16 @@ export function Header() {
                    </div>
                    
                    {user.role !== 'admin' && (
-                     <Link href="/dashboard/proposals" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-zinc-900 hover:text-white transition-colors">
-                       <FileText size={16} className="text-primary" />
-                       My Proposals
-                     </Link>
+                     <>
+                       <Link href="/dashboard/proposals" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-zinc-900 hover:text-white transition-colors">
+                         <FileText size={16} className="text-primary" />
+                         My Proposals
+                       </Link>
+                       <Link href="/dashboard/resumestudio" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-zinc-900 hover:text-white transition-colors">
+                         <User size={16} className="text-emerald-500" />
+                         Resume Studio
+                       </Link>
+                     </>
                    )}
                    
                    <Link href="/dashboard/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-zinc-900 hover:text-white transition-colors">
