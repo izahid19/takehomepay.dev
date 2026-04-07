@@ -20,6 +20,7 @@ export default function NewResumeProjectPage() {
   const [jobDescription, setJobDescription] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasUserEditedName, setHasUserEditedName] = useState(false);
 
   // Check profile has resume
   const [profileData, setProfileData] = useState<any>(null);
@@ -57,10 +58,10 @@ export default function NewResumeProjectPage() {
     <div className="relative min-h-full space-y-8 pb-20">
       {/* Background Pattern — matching other dashboard pages */}
       <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
-        <div className="absolute inset-0 bg-[radial-gradient(#1d1d1d_1px,transparent_1px)] [background-size:24px_24px]" />
+         <div className="absolute inset-0 bg-[radial-gradient(#1d1d1d_1px,transparent_1px)] [background-size:24px_24px]" />
       </div>
 
-      <div className="relative z-10 max-w-2xl mx-auto space-y-8">
+      <div className="relative z-10 max-w-5xl mx-auto px-6 space-y-8">
 
         {/* Back */}
         <Link
@@ -123,7 +124,10 @@ export default function NewResumeProjectPage() {
             <input
               type="text"
               value={profileType}
-              onChange={(e) => setProfileType(e.target.value)}
+              onChange={(e) => {
+                setProfileType(e.target.value);
+                setHasUserEditedName(true);
+              }}
               placeholder="e.g. Senior Frontend Dev @ Google"
               maxLength={100}
               className={cn(
@@ -153,7 +157,24 @@ export default function NewResumeProjectPage() {
             </label>
             <textarea
               value={jobDescription}
-              onChange={(e) => setJobDescription(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setJobDescription(val);
+                if (!hasUserEditedName) {
+                  if (val.trim().length > 0) {
+                    const lines = val.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                    if (lines.length > 0) {
+                      let title = lines[0];
+                      if (title.length > 40) {
+                        title = title.substring(0, 40) + '...';
+                      }
+                      setProfileType(title);
+                    }
+                  } else {
+                    setProfileType('');
+                  }
+                }
+              }}
               placeholder="Paste the full job description here..."
               rows={12}
               maxLength={MAX_JD}

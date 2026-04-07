@@ -210,7 +210,7 @@ export default function ResumePreviewPage() {
 
   return (
     <div className="min-h-screen bg-[#09090b] p-4 md:p-8">
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="max-w-5xl mx-auto px-6 space-y-6">
 
         {/* Nav bar */}
         <div className="flex items-center justify-between gap-4">

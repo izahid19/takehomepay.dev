@@ -377,6 +377,7 @@ export default function ResumeStudioPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [viewRecord, setViewRecord] = useState<ResumeRecord | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     getResumesApi()
@@ -385,23 +386,25 @@ export default function ResumeStudioPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this resume? This cannot be undone.')) return;
-    setDeletingId(id);
+  const handleDeleteConfirm = async () => {
+    if (!confirmDeleteId) return;
+    setDeletingId(confirmDeleteId);
     try {
-      await deleteResumeApi(id);
-      setRecords((prev) => prev.filter((r) => r._id !== id));
+      await deleteResumeApi(confirmDeleteId);
+      setRecords((prev) => prev.filter((r) => r._id !== confirmDeleteId));
     } catch {
       alert('Failed to delete. Please try again.');
     } finally {
       setDeletingId(null);
+      setConfirmDeleteId(null);
     }
   };
 
   const handleDownload = async (record: ResumeRecord) => {
     setDownloadingId(record._id);
     try {
-      const name = `${record.newResumeContent?.fullName || 'Resume'}_${new Date(record.createdAt).toISOString().slice(0, 10)}.pdf`;
+      const personName = (record.newResumeContent?.fullName || record.prevResumeContent?.fullName || 'Candidate').replace(/[^a-zA-Z0-9_\-]/g, '_');
+      const name = `${personName}_detailed_resume.pdf`;
       await downloadResumeApi(record._id, name);
     } catch {
       alert('Failed to download PDF. Please try again.');
@@ -417,6 +420,46 @@ export default function ResumeStudioPage() {
         isOpen={!!viewRecord}
         onClose={() => setViewRecord(null)}
       />
+
+      <AnimatePresence>
+        {confirmDeleteId && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#0c0c0e] border border-red-500/20 rounded-2xl p-8 max-w-md w-full shadow-2xl relative"
+            >
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/20 text-red-500 shrink-0">
+                  <Trash2 className="w-7 h-7" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Delete Project?</h3>
+                  <p className="text-sm text-zinc-400 mt-1.5 leading-relaxed">Are you sure you want to delete this project permanently? This action cannot be undone.</p>
+                </div>
+              </div>
+              <div className="flex gap-3 justify-end mt-8">
+                <button 
+                  onClick={() => setConfirmDeleteId(null)} 
+                  disabled={!!deletingId}
+                  className="px-5 py-2.5 rounded-xl font-semibold text-sm border border-zinc-700 hover:bg-zinc-800 text-zinc-300 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleDeleteConfirm} 
+                  disabled={!!deletingId}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 shadow-lg shadow-red-500/10 transition-all disabled:opacity-50"
+                >
+                  {deletingId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  {deletingId ? 'Deleting...' : 'Delete Permanently'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <div className="relative min-h-full space-y-8 pb-20">
         {/* Background Pattern — matching proposals page */}
@@ -491,7 +534,7 @@ export default function ResumeStudioPage() {
                 <ResumeHistoryCard
                   key={record._id}
                   record={record}
-                  onDelete={() => handleDelete(record._id)}
+                  onDelete={() => setConfirmDeleteId(record._id)}
                   isDeleting={deletingId === record._id}
                   onView={() => setViewRecord(record)}
                   onDownload={() => handleDownload(record)}

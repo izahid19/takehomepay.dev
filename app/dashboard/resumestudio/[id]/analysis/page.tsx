@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,6 +13,7 @@ import {
 import { cn } from '@/lib/utils';
 import {
   getResumeByIdApi,
+  analyzeForProjectApi,
   ResumeRecord,
   ResumeAnalysis,
   SectionAnalysis,
@@ -22,6 +23,7 @@ import {
   ImprovementItem,
   ScoreBreakdown,
 } from '@/lib/resumeStudio.api';
+import api from '@/lib/axios';
 
 // ─── Score Ring ────────────────────────────────
 function ScoreRing({ score, size = 'lg' }: { score: number; size?: 'lg' | 'sm' }) {
@@ -384,20 +386,191 @@ function ATSCheckItem({ check }: { check: ATSCheck }) {
   );
 }
 
+// ─── Generating State (inline, not modal) ──────
+function AnalyzingState() {
+  const steps = [
+    'Reading your resume...',
+    'Running deep analysis with DeepSeek R1...',
+    'Extracting ATS keywords & checking compatibility...',
+    'Scoring each resume section individually...',
+    'Analyzing bullet points with STAR method...',
+    'Generating improvement suggestions & rewrites...',
+    'Compiling premium analysis report...',
+  ];
+
+  const [stepIdx, setStepIdx] = React.useState(0);
+
+  React.useEffect(() => {
+    const id = setInterval(() => setStepIdx((i) => Math.min(i + 1, steps.length - 1)), 15000);
+    return () => clearInterval(id);
+  }, [steps.length]);
+
+  return (
+    <div className="relative min-h-full pb-20">
+      {/* Background Pattern */}
+      <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
+        <div className="absolute inset-0 bg-[radial-gradient(#1d1d1d_1px,transparent_1px)] [background-size:24px_24px]" />
+      </div>
+
+      <div className="relative z-10 max-w-5xl mx-auto px-6 space-y-8 pt-4">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20">
+            <BarChart3 className="w-6 h-6 text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-white">Resume Analysis</h1>
+            <p className="text-zinc-500 text-sm font-medium mt-0.5">Generating your premium report...</p>
+          </div>
+        </div>
+
+        {/* Progress Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-card/60 backdrop-blur-sm border border-blue-500/10 rounded-2xl p-10 shadow-2xl"
+        >
+          <div className="flex flex-col items-center gap-8">
+            {/* Spinner */}
+            <div className="relative w-24 h-24">
+              <div className="absolute inset-0 rounded-full border-4 border-zinc-800" />
+              <div className="absolute inset-0 rounded-full border-4 animate-spin border-t-blue-500 border-r-blue-500/20 border-b-transparent border-l-transparent" />
+              <div className="absolute inset-[8px] rounded-full bg-zinc-900 flex items-center justify-center">
+                <BarChart3 className="w-8 h-8 text-blue-400 animate-pulse" />
+              </div>
+            </div>
+
+            {/* Step text */}
+            <div className="text-center space-y-2">
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={stepIdx}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.25 }}
+                  className="text-sm font-bold text-blue-400"
+                >
+                  {steps[stepIdx]}
+                </motion.p>
+              </AnimatePresence>
+              <p className="text-xs text-zinc-600 font-medium">
+                Premium analysis takes 1–2 minutes with the reasoning model
+              </p>
+            </div>
+
+            {/* Progress bar */}
+            <div className="w-full max-w-sm">
+              <div className="w-full bg-zinc-800 rounded-full h-1.5">
+                <motion.div
+                  className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400"
+                  initial={{ width: '5%' }}
+                  animate={{ width: `${((stepIdx + 1) / steps.length) * 100}%` }}
+                  transition={{ duration: 0.6 }}
+                />
+              </div>
+              <p className="text-[10px] text-zinc-600 font-medium text-center mt-2">
+                Step {stepIdx + 1} of {steps.length}
+              </p>
+            </div>
+
+            {/* Shimmer lines */}
+            <div className="w-full space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                {[75, 60, 85, 50, 70, 65].map((w, i) => (
+                  <div
+                    key={i}
+                    className="h-2 bg-zinc-800 rounded-full animate-pulse"
+                    style={{ width: `${w}%`, animationDelay: `${i * 0.15}s` }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* What you'll get */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {[
+            { icon: Target, label: 'Section Scores', color: 'text-blue-400' },
+            { icon: FileText, label: 'Bullet Rewrites', color: 'text-pink-400' },
+            { icon: Shield, label: 'ATS Checks', color: 'text-cyan-400' },
+            { icon: Code2, label: 'Keyword Map', color: 'text-purple-400' },
+            { icon: Wrench, label: 'Action Plan', color: 'text-amber-400' },
+            { icon: TrendingUp, label: 'Strengths', color: 'text-emerald-400' },
+          ].map(({ icon: I, label, color }, idx) => (
+            <div key={idx} className="flex items-center gap-2 p-3 bg-zinc-900/40 border border-zinc-800/50 rounded-xl">
+              <I className={cn('w-4 h-4', color)} />
+              <span className="text-xs text-zinc-400 font-medium">{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ─────────────────────────────────
 export default function AnalysisPage() {
   const { id } = useParams<{ id: string }>();
   const [record, setRecord] = useState<ResumeRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    getResumeByIdApi(id)
-      .then(setRecord)
-      .catch(() => setError('Failed to load analysis.'))
-      .finally(() => setIsLoading(false));
+  // Fetch the project record
+  const fetchRecord = useCallback(async () => {
+    try {
+      const data = await getResumeByIdApi(id);
+      setRecord(data);
+      return data;
+    } catch {
+      setError('Failed to load project.');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
   }, [id]);
 
+  // On mount: Fetch record, then auto-trigger analysis if needed
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const data = await fetchRecord();
+      if (cancelled) return;
+
+      // If analysis doesn't exist yet, auto-trigger it
+      if (data && !data.analysis) {
+        // Need the user's resume rawText from profile
+        try {
+          const profileRes = await api.get('/profile');
+          const rawText = profileRes.data?.data?.resume?.rawText;
+          if (!rawText) {
+            setError('Please upload a resume in your profile first.');
+            return;
+          }
+          if (cancelled) return;
+
+          setIsAnalyzing(true);
+          const updated = await analyzeForProjectApi(id, rawText);
+          if (!cancelled) {
+            setRecord(updated);
+            setIsAnalyzing(false);
+          }
+        } catch (err: any) {
+          if (!cancelled) {
+            setError(err?.response?.data?.message || err?.message || 'Analysis failed. Please try again.');
+            setIsAnalyzing(false);
+          }
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [id, fetchRecord]);
+
+  // ── Loading state ────────────────────────────
   if (isLoading) {
     return (
       <div className="h-[60vh] flex items-center justify-center">
@@ -406,19 +579,30 @@ export default function AnalysisPage() {
     );
   }
 
+  // ── Analyzing state (generating in progress) ─
+  if (isAnalyzing) {
+    return <AnalyzingState />;
+  }
+
+  // ── Error / No analysis state ────────────────
   if (error || !record?.analysis) {
     return (
-      <div className="h-[60vh] flex flex-col items-center justify-center gap-4 p-8">
-        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center">
-          <AlertCircle className="w-8 h-8 text-red-400" />
+      <div className="relative min-h-full pb-20">
+        <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
+          <div className="absolute inset-0 bg-[radial-gradient(#1d1d1d_1px,transparent_1px)] [background-size:24px_24px]" />
         </div>
-        <p className="text-white font-bold text-lg">Analysis not available</p>
-        <p className="text-zinc-500 text-sm text-center max-w-sm">
-          {error || 'This project has not been analyzed yet. Generate the analysis first.'}
-        </p>
-        <Link href={`/dashboard/resumestudio/${id}`} className="text-sm text-primary hover:underline font-medium">
-          ← Back to Project
-        </Link>
+        <div className="relative z-10 h-[60vh] flex flex-col items-center justify-center gap-4 p-8">
+          <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-red-400" />
+          </div>
+          <p className="text-white font-bold text-lg">Analysis not available</p>
+          <p className="text-zinc-500 text-sm text-center max-w-sm">
+            {error || 'Something went wrong generating the analysis.'}
+          </p>
+          <Link href={`/dashboard/resumestudio/${id}`} className="text-sm text-primary hover:underline font-medium">
+            ← Back to Project
+          </Link>
+        </div>
       </div>
     );
   }
@@ -452,7 +636,7 @@ export default function AnalysisPage() {
         <div className="absolute inset-0 bg-[radial-gradient(#1d1d1d_1px,transparent_1px)] [background-size:24px_24px]" />
       </div>
 
-      <div className="relative z-10 max-w-3xl mx-auto space-y-6">
+      <div className="relative z-10 max-w-5xl mx-auto px-6 space-y-6">
 
         {/* Back */}
         <Link
@@ -689,7 +873,6 @@ export default function AnalysisPage() {
               defaultOpen
             >
               <div className="space-y-2">
-                {/* Sort: high first, then medium, then low */}
                 {[...a.improvements]
                   .sort((a, b) => {
                     const order: Record<string, number> = { high: 0, medium: 1, low: 2 };
@@ -722,17 +905,6 @@ export default function AnalysisPage() {
             </CollapsibleSection>
           </motion.div>
         )}
-
-        {/* ═══ VIEW RESUME CTA ═══ */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }}>
-          <Link
-            href={`/dashboard/resumestudio/${id}/preview`}
-            className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-extrabold text-sm bg-gradient-to-r from-emerald-500 to-teal-500 text-black hover:brightness-105 transition-all shadow-lg shadow-emerald-500/20"
-          >
-            <Target className="w-4 h-4" />
-            View Tailored Resume
-          </Link>
-        </motion.div>
       </div>
     </div>
   );

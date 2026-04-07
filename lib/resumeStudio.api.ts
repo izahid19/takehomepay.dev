@@ -85,6 +85,7 @@ export interface ResumeLinks {
   github: string;
   linkedin: string;
   leetcode: string;
+  portfolio: string;
 }
 
 export interface ResumeExperience {
@@ -266,6 +267,14 @@ export async function downloadResumeApi(id: string, filename?: string): Promise<
   a.download = filename ?? `resume_${id}.pdf`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+/**
+ * GET /resume/:id/download — returns the PDF blob without auto-downloading.
+ */
+export async function downloadResumeBlobApi(id: string): Promise<Blob> {
+  const response = await api.get(`/resume/${id}/download`, { responseType: 'blob' });
+  return new Blob([response.data], { type: 'application/pdf' });
 }
 
 /**

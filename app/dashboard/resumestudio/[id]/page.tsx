@@ -11,11 +11,10 @@ import {
 import { cn } from '@/lib/utils';
 import {
   getResumeByIdApi,
-  generateForProjectApi,
-  analyzeForProjectApi,
-  generateResumeForProjectApi,
   downloadResumeApi,
   deleteResumeApi,
+  analyzeForProjectApi,
+  generateResumeForProjectApi,
   ResumeRecord,
 } from '@/lib/resumeStudio.api';
 import api from '@/lib/axios';
@@ -55,16 +54,19 @@ function GeneratingOverlay({
   }, [steps.length]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6"
-    >
+    <div className="relative min-h-full pb-20 pt-16 flex flex-col items-center justify-center">
+      <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
+        <div className="absolute inset-0 bg-[radial-gradient(#1d1d1d_1px,transparent_1px)] [background-size:24px_24px]" />
+      </div>
+
       <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="bg-[#0c0c0e] border border-zinc-800 rounded-2xl p-10 max-w-md w-full flex flex-col items-center gap-6 text-center shadow-2xl"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className={cn(
+          "relative z-10 bg-[#0c0c0e] border rounded-3xl p-12 max-w-xl w-full flex flex-col items-center gap-8 text-center shadow-2xl",
+          accent === 'blue' ? 'border-blue-500/20' : 'border-emerald-500/20'
+        )}
       >
         <div className="relative w-20 h-20">
           <div className="absolute inset-0 rounded-full border-4 border-zinc-800" />
@@ -127,7 +129,7 @@ function GeneratingOverlay({
           ))}
         </div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -141,6 +143,8 @@ export default function ResumeProjectPage() {
   const [generatingMode, setGeneratingMode] = useState<'analysis' | 'resume' | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [regenerateTarget, setRegenerateTarget] = useState<'analysis' | 'resume' | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Profile (for resumeText)
@@ -170,40 +174,46 @@ export default function ResumeProjectPage() {
   const hasAnalysis = !!record?.analysis;
   const hasGeneratedResume = !!record?.newResumeContent;
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = () => {
     if (!hasResume) {
       setError('Please upload a resume in your profile first.');
       return;
     }
-    if (!record || hasAnalysis) return;
-
-    setGeneratingMode('analysis');
-    setError(null);
-    try {
-      const updated = await analyzeForProjectApi(id, profileData.resume.rawText);
-      setRecord(updated);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || 'Analysis failed. Please try again.');
-    } finally {
-      setGeneratingMode(null);
-    }
+    // Navigate to analysis page — it handles generation itself
+    router.push(`/dashboard/resumestudio/${id}/analysis`);
   };
 
-  const handleGenerateResume = async () => {
+  const handleGenerateResume = () => {
     if (!hasResume) {
       setError('Please upload a resume in your profile first.');
       return;
     }
-    if (!record || hasGeneratedResume) return;
+    router.push(`/dashboard/resumestudio/${id}/generated`);
+  };
 
-    setGeneratingMode('resume');
+  const handleRegenerateConfirm = async () => {
+    const target = regenerateTarget;
+    setRegenerateTarget(null);
+    if (!target) return;
+    
+    if (!hasResume) {
+      setError('Please upload a resume in your profile first.');
+      return;
+    }
+
+    setGeneratingMode(target);
     setError(null);
+    
     try {
-      const updated = await generateResumeForProjectApi(id, profileData.resume.rawText);
-      setRecord(updated);
+      if (target === 'analysis') {
+        await analyzeForProjectApi(id, profileData.resume.rawText);
+        router.push(`/dashboard/resumestudio/${id}/analysis`);
+      } else {
+        await generateResumeForProjectApi(id, profileData.resume.rawText);
+        router.push(`/dashboard/resumestudio/${id}/generated`);
+      }
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || 'Resume generation failed. Please try again.');
-    } finally {
+      setError(err?.response?.data?.message || err?.message || `Failed to regenerate ${target}`);
       setGeneratingMode(null);
     }
   };
@@ -212,7 +222,9 @@ export default function ResumeProjectPage() {
     if (!record) return;
     setIsDownloading(true);
     try {
-      await downloadResumeApi(id, `${record.profileType?.replace(/\s+/g, '_') || 'Resume'}.pdf`);
+      const fullName = record.newResumeContent?.fullName || record.prevResumeContent?.fullName || 'Candidate';
+      const personName = fullName.replace(/[^a-zA-Z0-9_\-]/g, '_');
+      await downloadResumeApi(id, `${personName}_detailed_resume.pdf`);
     } catch {
       setError('Failed to download PDF.');
     } finally {
@@ -220,8 +232,7 @@ export default function ResumeProjectPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm('Delete this project permanently? This cannot be undone.')) return;
+  const handleDeleteConfirm = async () => {
     setIsDeleting(true);
     try {
       await deleteResumeApi(id);
@@ -229,6 +240,7 @@ export default function ResumeProjectPage() {
     } catch {
       setError('Failed to delete project.');
       setIsDeleting(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -260,9 +272,87 @@ export default function ResumeProjectPage() {
     day: 'numeric', month: 'short', year: 'numeric',
   });
 
+  if (generatingMode) {
+    return <GeneratingOverlay mode={generatingMode} />;
+  }
+
   return (
     <>
-      <AnimatePresence>{generatingMode && <GeneratingOverlay mode={generatingMode} />}</AnimatePresence>
+      <AnimatePresence>
+        {regenerateTarget && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#0c0c0e] border border-zinc-800 rounded-2xl p-8 max-w-md w-full shadow-2xl relative"
+            >
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-3 bg-amber-500/10 rounded-full border border-amber-500/20 text-amber-500 shrink-0">
+                  <AlertCircle className="w-7 h-7" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Regenerate {regenerateTarget === 'analysis' ? 'Analysis' : 'Resume'}?</h3>
+                  <p className="text-sm text-zinc-400 mt-1.5 leading-relaxed">Are you sure you want to regenerate it? The old data will be permanently overwritten.</p>
+                </div>
+              </div>
+              <div className="flex gap-3 justify-end mt-8">
+                <button 
+                  onClick={() => setRegenerateTarget(null)} 
+                  className="px-5 py-2.5 rounded-xl font-semibold text-sm border border-zinc-700 hover:bg-zinc-800 text-zinc-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleRegenerateConfirm} 
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 to-orange-500 text-black hover:brightness-105 shadow-lg shadow-amber-500/20 transition-all"
+                >
+                  <Zap className="w-4 h-4" />
+                  Regenerate
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#0c0c0e] border border-red-500/20 rounded-2xl p-8 max-w-md w-full shadow-2xl relative"
+            >
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/20 text-red-500 shrink-0">
+                  <Trash2 className="w-7 h-7" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Delete Project?</h3>
+                  <p className="text-sm text-zinc-400 mt-1.5 leading-relaxed">Are you sure you want to delete this project permanently? This action cannot be undone.</p>
+                </div>
+              </div>
+              <div className="flex gap-3 justify-end mt-8">
+                <button 
+                  onClick={() => setShowDeleteModal(false)} 
+                  disabled={isDeleting}
+                  className="px-5 py-2.5 rounded-xl font-semibold text-sm border border-zinc-700 hover:bg-zinc-800 text-zinc-300 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleDeleteConfirm} 
+                  disabled={isDeleting}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 shadow-lg shadow-red-500/10 transition-all disabled:opacity-50"
+                >
+                  {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  {isDeleting ? 'Deleting...' : 'Delete Permanently'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <div className="relative min-h-full space-y-8 pb-20">
         {/* Background Pattern — matching proposals page */}
@@ -270,7 +360,7 @@ export default function ResumeProjectPage() {
           <div className="absolute inset-0 bg-[radial-gradient(#1d1d1d_1px,transparent_1px)] [background-size:24px_24px]" />
         </div>
 
-        <div className="relative z-10 max-w-2xl mx-auto space-y-8">
+        <div className="relative z-10 max-w-5xl mx-auto px-6 space-y-8">
 
           {/* Back */}
           <Link
@@ -307,7 +397,7 @@ export default function ResumeProjectPage() {
 
               {/* Delete */}
               <button
-                onClick={handleDelete}
+                onClick={() => setShowDeleteModal(true)}
                 disabled={isDeleting || !!generatingMode}
                 className="p-2.5 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all disabled:opacity-40 shrink-0 border border-transparent hover:border-red-500/20"
                 title="Delete project"
@@ -407,38 +497,37 @@ export default function ResumeProjectPage() {
                 {/* Action area */}
                 <div className="mt-6">
                   {hasAnalysis ? (
-                    <Link
-                      href={`/dashboard/resumestudio/${id}/analysis`}
-                      className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 transition-all"
-                    >
-                      <BarChart3 className="w-4 h-4" />
-                      View Analysis Report
-                    </Link>
+                    <div className="flex gap-3">
+                      <Link
+                        href={`/dashboard/resumestudio/${id}/analysis`}
+                        className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 transition-all"
+                      >
+                        <BarChart3 className="w-4 h-4" />
+                        View Analysis Report
+                      </Link>
+                      <button
+                        onClick={() => setRegenerateTarget('analysis')}
+                        title="Regenerate Analysis"
+                        className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl font-bold text-sm border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 text-zinc-300 transition-all shrink-0"
+                      >
+                        <Zap className="w-4 h-4" />
+                        Regenerate
+                      </button>
+                    </div>
                   ) : (
-                    <motion.button
+                    <button
                       onClick={handleAnalyze}
-                      disabled={!!generatingMode || !hasResume}
-                      whileHover={!generatingMode && hasResume ? { scale: 1.01 } : {}}
-                      whileTap={!generatingMode && hasResume ? { scale: 0.98 } : {}}
+                      disabled={!hasResume}
                       className={cn(
                         'w-full py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition-all',
-                        hasResume && !generatingMode
+                        hasResume
                           ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-black shadow-lg shadow-blue-500/20 hover:brightness-105'
                           : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
                       )}
                     >
-                      {generatingMode === 'analysis' ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Analyzing...
-                        </>
-                      ) : (
-                        <>
-                          <Zap className="w-4 h-4" />
-                          Generate Analysis
-                        </>
-                      )}
-                    </motion.button>
+                      <Zap className="w-4 h-4" />
+                      Generate Analysis
+                    </button>
                   )}
                 </div>
               </div>
@@ -481,7 +570,7 @@ export default function ResumeProjectPage() {
                   </div>
 
                   {hasGeneratedResume && (
-                    <Link href={`/dashboard/resumestudio/${id}/preview`}>
+                    <Link href={`/dashboard/resumestudio/${id}/generated`}>
                       <ChevronRight className="w-5 h-5 text-zinc-600 hover:text-emerald-400 transition-colors shrink-0 mt-1" />
                     </Link>
                   )}
@@ -494,44 +583,41 @@ export default function ResumeProjectPage() {
                       <button
                         onClick={handleDownload}
                         disabled={isDownloading}
-                        className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-extrabold text-sm bg-gradient-to-r from-emerald-500 to-teal-500 text-black hover:brightness-105 transition-all disabled:opacity-60 shadow-lg shadow-emerald-500/20"
+                        className="flex-[2] flex items-center justify-center gap-2 py-3.5 rounded-xl font-extrabold text-sm bg-gradient-to-r from-emerald-500 to-teal-500 text-black hover:brightness-105 transition-all disabled:opacity-60 shadow-lg shadow-emerald-500/20"
                       >
                         {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                         {isDownloading ? 'Downloading...' : 'Download PDF'}
                       </button>
                       <Link
-                        href={`/dashboard/resumestudio/${id}/preview`}
-                        className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl font-bold text-sm border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 text-zinc-300 transition-all"
+                        href={`/dashboard/resumestudio/${id}/generated`}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl font-bold text-sm border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 text-zinc-300 transition-all"
                       >
                         <Target className="w-4 h-4" />
                         Edit
                       </Link>
+                      <button
+                        onClick={() => setRegenerateTarget('resume')}
+                        title="Regenerate ATS Resume"
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl font-bold text-sm border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 text-zinc-300 transition-all"
+                      >
+                        <Zap className="w-4 h-4" />
+                        Regenerate
+                      </button>
                     </div>
                   ) : (
-                    <motion.button
+                    <button
                       onClick={handleGenerateResume}
-                      disabled={!!generatingMode || !hasResume}
-                      whileHover={!generatingMode && hasResume ? { scale: 1.01 } : {}}
-                      whileTap={!generatingMode && hasResume ? { scale: 0.98 } : {}}
+                      disabled={!hasResume}
                       className={cn(
                         'w-full py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition-all',
-                        hasResume && !generatingMode
+                        hasResume
                           ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-black shadow-lg shadow-emerald-500/20 hover:brightness-105'
                           : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
                       )}
                     >
-                      {generatingMode === 'resume' ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Zap className="w-4 h-4" />
-                          Generate ATS Resume
-                        </>
-                      )}
-                    </motion.button>
+                      <Zap className="w-4 h-4" />
+                      Generate ATS Resume
+                    </button>
                   )}
                 </div>
               </div>
