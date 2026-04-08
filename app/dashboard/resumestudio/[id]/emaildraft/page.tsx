@@ -81,13 +81,17 @@ export default function EmailDraftPage() {
     }
   };
 
+  const [isPreparing, setIsPreparing] = useState(true);
+
   // Auto-trigger generation on mount if no draft exists
   useEffect(() => {
-    if (!isLoading && record && !hasEmailDraft && record.emailDraftStatus !== 'FAILED') {
+    if (!isLoading && profileData && record && !hasEmailDraft && record.emailDraftStatus !== 'FAILED') {
       handleGenerate();
+    } else if (!isLoading && profileData) {
+      setIsPreparing(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, record?._id]);
+  }, [isLoading, !!profileData, record?._id]);
 
   const copySubject = () => {
     if (!emailDraft) return;
@@ -197,6 +201,31 @@ export default function EmailDraftPage() {
               <p className="text-sm font-semibold text-red-300">Error</p>
               <p className="text-xs text-red-400/80 mt-0.5">{error}</p>
             </div>
+          </motion.div>
+        )}
+        {/* No email draft yet & Not Generating — manual generate button */}
+        {!hasEmailDraft && !isGenerating && !isPreparing && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center gap-6 py-20"
+          >
+            <div className="w-20 h-20 bg-violet-500/10 rounded-full flex items-center justify-center border border-violet-500/20">
+              <Mail className="w-10 h-10 text-violet-400" />
+            </div>
+            <div className="text-center space-y-2">
+              <p className="text-lg font-bold text-white uppercase tracking-tight">No Email Draft Generated</p>
+              <p className="text-sm text-zinc-500 max-w-md">
+                Generate a professional outreach email based on your resume and the job description.
+              </p>
+            </div>
+            <button
+              onClick={handleGenerate}
+              className="flex items-center gap-3 px-8 py-4 text-base font-bold rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 text-white hover:brightness-110 shadow-lg shadow-violet-500/20 transition-all font-black uppercase tracking-wide"
+            >
+              <Zap className="w-5 h-5" />
+              Generate Email Draft
+            </button>
           </motion.div>
         )}
 

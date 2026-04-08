@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { saveProjectApi } from '@/lib/resumeStudio.api';
 import api from '@/lib/axios';
 
-const MAX_JD = 4000;
+const MAX_JD = 10000;
 
 export default function NewResumeProjectPage() {
   const router = useRouter();

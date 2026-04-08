@@ -344,25 +344,11 @@ const ResumeHistoryCard = ({
       <div className="flex gap-2 mt-auto">
         <Link
           href={`/dashboard/resumestudio/${record._id}`}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 rounded-xl transition-all"
+          className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-bold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 rounded-xl transition-all"
         >
           <FileText className="w-4 h-4" />
           View Project
         </Link>
-        {record.status === 'SUCCESS' && (
-          <button
-            onClick={onDownload}
-            disabled={isDownloading}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold text-black bg-gradient-to-r from-[#2DD4BF] to-[#10B981] hover:brightness-105 rounded-xl transition-all disabled:opacity-60"
-          >
-            {isDownloading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Download className="w-4 h-4" />
-            )}
-            {isDownloading ? 'Generating...' : 'Download PDF'}
-          </button>
-        )}
       </div>
     </motion.div>
   );

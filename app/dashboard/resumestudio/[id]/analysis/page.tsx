@@ -389,6 +389,7 @@ function ATSCheckItem({ check }: { check: ATSCheck }) {
 // ─── Main Page ─────────────────────────────────
 export default function AnalysisPage() {
   const { id } = useParams<{ id: string }>();
+  const [isChecking, setIsChecking] = useState(true);
   const [record, setRecord] = useState<ResumeRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -408,6 +409,28 @@ export default function AnalysisPage() {
     }
   }, [id]);
 
+  const runAnalysis = async () => {
+    setError(null);
+    setIsAnalyzing(true);
+    try {
+      const profileRes = await api.get('/profile');
+      const rawText = profileRes.data?.data?.resume?.rawText;
+      if (!rawText) {
+        setError('Please upload a resume in your profile first.');
+        setIsAnalyzing(false);
+        return;
+      }
+      const updated = await analyzeForProjectApi(id, rawText);
+      setRecord(updated);
+      setIsAnalyzing(false);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err?.message || 'Analysis failed. Please try again.');
+      setIsAnalyzing(false);
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
   // On mount: Fetch record, then auto-trigger analysis if needed
   useEffect(() => {
     let cancelled = false;
@@ -418,28 +441,9 @@ export default function AnalysisPage() {
 
       // If analysis doesn't exist yet, auto-trigger it
       if (data && !data.analysis) {
-        // Need the user's resume rawText from profile
-        try {
-          const profileRes = await api.get('/profile');
-          const rawText = profileRes.data?.data?.resume?.rawText;
-          if (!rawText) {
-            setError('Please upload a resume in your profile first.');
-            return;
-          }
-          if (cancelled) return;
-
-          setIsAnalyzing(true);
-          const updated = await analyzeForProjectApi(id, rawText);
-          if (!cancelled) {
-            setRecord(updated);
-            setIsAnalyzing(false);
-          }
-        } catch (err: any) {
-          if (!cancelled) {
-            setError(err?.response?.data?.message || err?.message || 'Analysis failed. Please try again.');
-            setIsAnalyzing(false);
-          }
-        }
+        runAnalysis();
+      } else {
+        setIsChecking(false);
       }
     })();
 
@@ -628,7 +632,7 @@ export default function AnalysisPage() {
         )}
 
         {/* Error / Empty State */}
-        {!isAnalyzing && (error || !record?.analysis) && (
+        {!isAnalyzing && !isLoading && !isChecking && (error || !record?.analysis) && (
           <div className="py-20 flex flex-col items-center justify-center gap-6">
             <div className="relative w-16 h-16">
               <div className="absolute inset-0 rounded-full border-4 border-zinc-800" />
@@ -647,7 +651,7 @@ export default function AnalysisPage() {
             </div>
 
             <button
-              onClick={() => window.location.reload()}
+              onClick={runAnalysis}
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-all font-bold text-sm"
             >
               <Zap className="w-4 h-4" />

@@ -38,6 +38,8 @@ export default function GeneratedResumePage() {
     }
   }, [id]);
 
+  const [isPreparing, setIsPreparing] = useState(true);
+
   // On mount: Fetch record, then auto-trigger generation if needed
   useEffect(() => {
     let cancelled = false;
@@ -53,6 +55,7 @@ export default function GeneratedResumePage() {
           const rawText = profileRes.data?.data?.resume?.rawText;
           if (!rawText) {
             setError('Please upload a resume in your profile first.');
+            setIsPreparing(false);
             return;
           }
           if (cancelled) return;
@@ -62,13 +65,17 @@ export default function GeneratedResumePage() {
           if (!cancelled) {
             setRecord(updated);
             setIsGenerating(false);
+            setIsPreparing(false);
           }
         } catch (err: any) {
           if (!cancelled) {
             setError(err?.response?.data?.message || err?.message || 'Resume generation failed.');
             setIsGenerating(false);
+            setIsPreparing(false);
           }
         }
+      } else {
+        setIsPreparing(false);
       }
     })();
 
@@ -85,7 +92,7 @@ export default function GeneratedResumePage() {
   }
 
   // ── Error / No resume ────────────────────────
-  if (!isGenerating && (error || !record?.newResumeContent)) {
+  if (!isGenerating && !isPreparing && (error || !record?.newResumeContent)) {
     return (
       <div className="relative min-h-full pb-20">
         <div className="fixed inset-0 z-0 pointer-events-none opacity-40">

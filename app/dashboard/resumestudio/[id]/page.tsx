@@ -143,7 +143,6 @@ export default function ResumeProjectPage() {
   const [generatingMode, setGeneratingMode] = useState<'analysis' | 'resume' | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [regenerateTarget, setRegenerateTarget] = useState<'analysis' | 'resume' | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -195,32 +194,7 @@ export default function ResumeProjectPage() {
     router.push(`/dashboard/resumestudio/${id}/generated`);
   };
 
-  const handleRegenerateConfirm = async () => {
-    const target = regenerateTarget;
-    setRegenerateTarget(null);
-    if (!target) return;
-    
-    if (!hasResume) {
-      setError('Please upload a resume in your profile first.');
-      return;
-    }
 
-    setGeneratingMode(target);
-    setError(null);
-    
-    try {
-      if (target === 'analysis') {
-        await analyzeForProjectApi(id, profileData.resume.rawText);
-        router.push(`/dashboard/resumestudio/${id}/analysis`);
-      } else {
-        await generateResumeForProjectApi(id, profileData.resume.rawText);
-        router.push(`/dashboard/resumestudio/${id}/generated`);
-      }
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || `Failed to regenerate ${target}`);
-      setGeneratingMode(null);
-    }
-  };
 
   const handleDownload = async () => {
     if (!record) return;
@@ -283,41 +257,7 @@ export default function ResumeProjectPage() {
   return (
     <>
       <AnimatePresence>
-        {regenerateTarget && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-6">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#0c0c0e] border border-zinc-800 rounded-2xl p-8 max-w-md w-full shadow-2xl relative"
-            >
-              <div className="flex items-center gap-4 mb-6">
-                <div className="p-3 bg-amber-500/10 rounded-full border border-amber-500/20 text-amber-500 shrink-0">
-                  <AlertCircle className="w-7 h-7" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">Regenerate {regenerateTarget === 'analysis' ? 'Analysis' : 'Resume'}?</h3>
-                  <p className="text-sm text-zinc-400 mt-1.5 leading-relaxed">Are you sure you want to regenerate it? The old data will be permanently overwritten.</p>
-                </div>
-              </div>
-              <div className="flex gap-3 justify-end mt-8">
-                <button 
-                  onClick={() => setRegenerateTarget(null)} 
-                  className="px-5 py-2.5 rounded-xl font-semibold text-sm border border-zinc-700 hover:bg-zinc-800 text-zinc-300 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={handleRegenerateConfirm} 
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 to-orange-500 text-black hover:brightness-105 shadow-lg shadow-amber-500/20 transition-all"
-                >
-                  <Zap className="w-4 h-4" />
-                  Regenerate
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
+
 
         {showDeleteModal && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-6">
@@ -493,19 +433,11 @@ export default function ResumeProjectPage() {
                   <>
                     <Link
                       href={`/dashboard/resumestudio/${id}/analysis`}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 rounded-xl transition-all"
+                      className="w-full flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 rounded-xl transition-all"
                     >
                       <BarChart3 className="w-3.5 h-3.5" />
                       View Report
                     </Link>
-                    <button
-                      onClick={() => setRegenerateTarget('analysis')}
-                      title="Regenerate Analysis"
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-black bg-gradient-to-r from-blue-500 to-cyan-400 hover:brightness-105 rounded-xl transition-all"
-                    >
-                      <Zap className="w-3.5 h-3.5" />
-                      Regenerate
-                    </button>
                   </>
                 ) : (
                   <button
@@ -561,28 +493,14 @@ export default function ResumeProjectPage() {
               <div className="flex gap-2 mt-auto">
                 {hasGeneratedResume ? (
                   <>
-                    <button
-                      onClick={handleDownload}
-                      disabled={isDownloading}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-black bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-105 rounded-xl transition-all disabled:opacity-60"
-                    >
-                      {isDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                      PDF
-                    </button>
+
                     <Link
                       href={`/dashboard/resumestudio/${id}/generated`}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 rounded-xl transition-all"
+                      className="w-full flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 rounded-xl transition-all"
                     >
                       <Target className="w-3.5 h-3.5" />
-                      Edit
+                      Edit Resume
                     </Link>
-                    <button
-                      onClick={() => setRegenerateTarget('resume')}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-black bg-gradient-to-r from-amber-500 to-orange-400 hover:brightness-105 rounded-xl transition-all"
-                    >
-                      <Zap className="w-3.5 h-3.5" />
-                      Remake
-                    </button>
                   </>
                 ) : (
                   <button
@@ -639,7 +557,7 @@ export default function ResumeProjectPage() {
                 {hasEmailDraft ? (
                     <Link
                       href={`/dashboard/resumestudio/${id}/emaildraft`}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 rounded-xl transition-all"
+                      className="w-full flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 rounded-xl transition-all"
                     >
                       <Mail className="w-3.5 h-3.5" />
                       View Email
@@ -696,7 +614,7 @@ export default function ResumeProjectPage() {
                 {hasCoverLetter ? (
                     <Link
                       href={`/dashboard/resumestudio/${id}/coverletter`}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 rounded-xl transition-all"
+                      className="w-full flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 rounded-xl transition-all"
                     >
                       <FileText className="w-3.5 h-3.5" />
                       View Letter

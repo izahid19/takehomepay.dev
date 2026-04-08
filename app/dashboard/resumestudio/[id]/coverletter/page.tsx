@@ -80,13 +80,17 @@ export default function CoverLetterPage() {
     }
   };
 
+  const [isPreparing, setIsPreparing] = useState(true);
+
   // Auto-trigger generation on mount if no cover letter exists
   useEffect(() => {
-    if (!isLoading && record && !hasCoverLetter && record.coverLetterStatus !== 'FAILED') {
+    if (!isLoading && profileData && record && !hasCoverLetter && record.coverLetterStatus !== 'FAILED') {
       handleGenerate();
+    } else if (!isLoading && profileData) {
+      setIsPreparing(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, record?._id]);
+  }, [isLoading, !!profileData, record?._id]);
 
   const copyFullText = () => {
     if (!coverLetter) return;
@@ -192,7 +196,7 @@ export default function CoverLetterPage() {
         )}
 
         {/* No cover letter yet & Not Generating — manual generate button */}
-        {!hasCoverLetter && !isGenerating && (
+        {!hasCoverLetter && !isGenerating && !isPreparing && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
