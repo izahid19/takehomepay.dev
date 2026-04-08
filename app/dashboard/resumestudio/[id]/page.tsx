@@ -175,6 +175,8 @@ export default function ResumeProjectPage() {
   const hasGeneratedResume = !!record?.newResumeContent;
   const emailDraftStatus = record?.emailDraftStatus || 'IDLE';
   const hasEmailDraft = !!record?.emailDraft;
+  const coverLetterStatus = record?.coverLetterStatus || 'IDLE';
+  const hasCoverLetter = !!record?.coverLetter;
 
   const handleAnalyze = () => {
     if (!hasResume) {
@@ -602,7 +604,7 @@ export default function ResumeProjectPage() {
 
             {/* ── EMAIL DRAFT CARD ── */}
             <div className={cn(
-              'bg-card/60 backdrop-blur-sm border rounded-2xl p-5 shadow-xl transition-colors group flex flex-col gap-4 md:col-span-2',
+              'bg-card/60 backdrop-blur-sm border rounded-2xl p-5 shadow-xl transition-colors group flex flex-col gap-4',
               hasEmailDraft ? 'border-violet-500/20 hover:border-violet-500/40' : 'border-border hover:border-zinc-700'
             )}>
               <div className="flex items-start justify-between gap-3">
@@ -652,6 +654,63 @@ export default function ResumeProjectPage() {
                   >
                     <Mail className="w-3.5 h-3.5" />
                     Generate Email Draft
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            {/* ── COVER LETTER CARD ── */}
+            <div className={cn(
+              'bg-card/60 backdrop-blur-sm border rounded-2xl p-5 shadow-xl transition-colors group flex flex-col gap-4',
+              hasCoverLetter ? 'border-amber-500/20 hover:border-amber-500/40' : 'border-border hover:border-zinc-700'
+            )}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2.5 bg-zinc-900 rounded-xl group-hover:bg-amber-500/10 transition-colors shrink-0">
+                    <FileText className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white truncate">Cover Letter</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {hasCoverLetter && (
+                        <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">
+                          Ready
+                        </span>
+                      )}
+                      {coverLetterStatus === 'FAILED' && (
+                        <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider">Failed</span>
+                      )}
+                      {!hasCoverLetter && coverLetterStatus !== 'FAILED' && (
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Not Generated</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-zinc-500 leading-relaxed font-medium">
+                AI-crafted professional cover letter tailored to the job description. Ready to download or copy.
+              </p>
+
+              <div className="flex gap-2 mt-auto">
+                {hasCoverLetter ? (
+                    <Link
+                      href={`/dashboard/resumestudio/${id}/coverletter`}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 rounded-xl transition-all"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      View Letter
+                    </Link>
+                ) : (
+                  <Link
+                    href={`/dashboard/resumestudio/${id}/coverletter`}
+                    className={cn(
+                      'w-full flex items-center justify-center gap-1.5 py-2 flex-1 text-[11px] sm:text-xs font-bold rounded-xl transition-all',
+                      'bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-lg shadow-amber-500/20 hover:brightness-105'
+                    )}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    Generate Cover Letter
                   </Link>
                 )}
               </div>

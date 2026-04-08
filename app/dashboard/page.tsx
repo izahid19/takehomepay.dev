@@ -123,10 +123,10 @@ export default function AdminDashboardPage() {
           <CardContent>
             <div className="text-3xl font-black">{stats?.users?.total || 0}</div>
             <div className="mt-2 flex items-center gap-2">
-              <span className="text-[10px] font-bold text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+              <span className="text-[11.5px] font-bold text-orange-500 bg-orange-500/10 px-2 py-1 rounded uppercase tracking-tighter">
                 {stats?.users?.pro || 0} PRO
               </span>
-              <span className="text-[10px] font-bold text-blue-500 bg-blue-500/10 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+              <span className="text-[11.5px] font-bold text-blue-500 bg-blue-500/10 px-2 py-1 rounded uppercase tracking-tighter">
                 {stats?.users?.elite || 0} ELITE
               </span>
             </div>
@@ -190,7 +190,7 @@ export default function AdminDashboardPage() {
             <div className="flex items-center gap-2">
                {stats?.proposals?.daily?.map((day: any) => (
                  <div key={day._id} className="flex flex-col items-center gap-1">
-                    <span className="text-[8px] text-muted-foreground uppercase">{day._id.split('-').slice(1).join('/')}</span>
+                    <span className="text-[10px] text-muted-foreground uppercase">{day._id.split('-').slice(1).join('/')}</span>
                     <div 
                       className="w-8 bg-primary/40 rounded-t-sm transition-all hover:bg-primary" 
                       style={{ height: `${Math.max(day.count * 10, 4)}px` }}

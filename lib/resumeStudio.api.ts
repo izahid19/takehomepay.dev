@@ -147,6 +147,14 @@ export interface EmailDraft {
   signature: string;
 }
 
+export interface CoverLetter {
+  title: string;
+  heading: string;
+  body: string[];
+  closing: string;
+  signature: string;
+}
+
 export interface ResumeRecord {
   _id: string;
   user: string;
@@ -156,10 +164,12 @@ export interface ResumeRecord {
   newResumeContent: ResumeContent | null;
   analysis: ResumeAnalysis | null;
   emailDraft: EmailDraft | null;
+  coverLetter: CoverLetter | null;
   status: 'SAVED' | 'GENERATING' | 'SUCCESS' | 'FAILED';
   analysisStatus: 'IDLE' | 'GENERATING' | 'SUCCESS' | 'FAILED';
   resumeStatus: 'IDLE' | 'GENERATING' | 'SUCCESS' | 'FAILED';
   emailDraftStatus: 'IDLE' | 'GENERATING' | 'SUCCESS' | 'FAILED';
+  coverLetterStatus: 'IDLE' | 'GENERATING' | 'SUCCESS' | 'FAILED';
   error: string | null;
   createdAt: string;
   updatedAt: string;
@@ -306,6 +316,22 @@ export async function generateEmailDraftApi(
 ): Promise<ResumeRecord> {
   const response = await api.post<{ status: string; data: ResumeRecord }>(
     `/resume/${id}/generate-email`,
+    { resumeText },
+    { timeout: 120_000 }
+  );
+  return response.data.data;
+}
+
+/**
+ * POST /resume/:id/generate-coverletter
+ * Generates a professional cover letter using JD + resume content.
+ */
+export async function generateCoverLetterApi(
+  id: string,
+  resumeText?: string
+): Promise<ResumeRecord> {
+  const response = await api.post<{ status: string; data: ResumeRecord }>(
+    `/resume/${id}/generate-coverletter`,
     { resumeText },
     { timeout: 120_000 }
   );

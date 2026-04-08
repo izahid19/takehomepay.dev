@@ -77,20 +77,20 @@ const ResumeDetailDrawer = ({
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   {c.email && (
                     <div>
-                      <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold mb-0.5">Email</p>
-                      <p className="text-zinc-300 text-xs truncate">{c.email}</p>
+                      <p className="text-[11.5px] text-zinc-500 uppercase tracking-wider font-bold mb-0.5">Email</p>
+                      <p className="text-zinc-300 text-[13px] truncate">{c.email}</p>
                     </div>
                   )}
                   {c.phone && (
                     <div>
-                      <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold mb-0.5">Phone</p>
-                      <p className="text-zinc-300 text-xs">{c.phone}</p>
+                      <p className="text-[11.5px] text-zinc-500 uppercase tracking-wider font-bold mb-0.5">Phone</p>
+                      <p className="text-zinc-300 text-[13px]">{c.phone}</p>
                     </div>
                   )}
                   {c.location && (
                     <div>
-                      <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold mb-0.5">Location</p>
-                      <p className="text-zinc-300 text-xs">{c.location}</p>
+                      <p className="text-[11.5px] text-zinc-500 uppercase tracking-wider font-bold mb-0.5">Location</p>
+                      <p className="text-zinc-300 text-[13px]">{c.location}</p>
                     </div>
                   )}
                 </div>
@@ -135,7 +135,7 @@ const ResumeDetailDrawer = ({
                         <span className="text-xs font-bold text-zinc-500 w-24 shrink-0">{g.label}:</span>
                         <div className="flex flex-wrap gap-1.5">
                           {g.skills!.map((s) => (
-                            <span key={s} className="text-[11px] px-2 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-300 font-medium">
+                            <span key={s} className="text-[12px] px-2.5 py-1 bg-zinc-800 border border-zinc-700 rounded text-zinc-300 font-medium">
                               {s}
                             </span>
                           ))}
@@ -168,7 +168,7 @@ const ResumeDetailDrawer = ({
                         {exp.technologies?.length > 0 && (
                           <div className="flex flex-wrap gap-1 my-2">
                             {exp.technologies.map((t) => (
-                              <span key={t} className="text-[10px] px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded font-medium">{t}</span>
+                              <span key={t} className="text-[11px] px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded font-medium">{t}</span>
                             ))}
                           </div>
                         )}
@@ -200,7 +200,7 @@ const ResumeDetailDrawer = ({
                         {proj.technologyStack?.length > 0 && (
                           <div className="flex flex-wrap gap-1 mb-2">
                             {proj.technologyStack.map((t) => (
-                              <span key={t} className="text-[10px] px-1.5 py-0.5 bg-zinc-800 border border-zinc-700 text-zinc-400 rounded">{t}</span>
+                              <span key={t} className="text-[11px] px-2 py-0.5 bg-zinc-800 border border-zinc-700 text-zinc-400 rounded">{t}</span>
                             ))}
                           </div>
                         )}
@@ -323,19 +323,19 @@ const ResumeHistoryCard = ({
       {/* Tags row */}
       <div className="flex flex-wrap gap-2">
         {c?.experience?.[0] && (
-          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-400 font-medium">
-            <Briefcase className="w-2.5 h-2.5" />
+          <span className="inline-flex items-center gap-1.5 text-[11.5px] px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-400 font-medium">
+            <Briefcase className="w-3 h-3" />
             {c.experience[0].role} @ {c.experience[0].company}
           </span>
         )}
         {skillCount > 0 && (
-          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-400 font-medium">
-            <Code2 className="w-2.5 h-2.5" />
+          <span className="inline-flex items-center gap-1.5 text-[11.5px] px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-400 font-medium">
+            <Code2 className="w-3 h-3" />
             {skillCount} skills
           </span>
         )}
-        <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-500">
-          <Clock className="w-2.5 h-2.5" />
+        <span className="inline-flex items-center gap-1.5 text-[11.5px] px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-500 font-medium">
+          <Clock className="w-3 h-3" />
           {dateStr}
         </span>
       </div>
@@ -344,21 +344,21 @@ const ResumeHistoryCard = ({
       <div className="flex gap-2 mt-auto">
         <Link
           href={`/dashboard/resumestudio/${record._id}`}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 rounded-xl transition-all"
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 rounded-xl transition-all"
         >
-          <FileText className="w-3.5 h-3.5" />
+          <FileText className="w-4 h-4" />
           View Project
         </Link>
         {record.status === 'SUCCESS' && (
           <button
             onClick={onDownload}
             disabled={isDownloading}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-black bg-gradient-to-r from-[#2DD4BF] to-[#10B981] hover:brightness-105 rounded-xl transition-all disabled:opacity-60"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold text-black bg-gradient-to-r from-[#2DD4BF] to-[#10B981] hover:brightness-105 rounded-xl transition-all disabled:opacity-60"
           >
             {isDownloading ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-4 h-4" />
             )}
             {isDownloading ? 'Generating...' : 'Download PDF'}
           </button>
@@ -489,9 +489,9 @@ export default function ResumeStudioPage() {
             </div>
             <Link
               href="/dashboard/resumestudio/new"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-extrabold text-black bg-gradient-to-r from-[#2DD4BF] to-[#10B981] hover:brightness-105 transition-all shadow-lg shadow-emerald-500/20 text-sm"
+              className="inline-flex items-center gap-2.5 px-8 py-4 rounded-xl font-black text-black bg-gradient-to-r from-[#2DD4BF] to-[#10B981] hover:brightness-105 transition-all shadow-lg shadow-emerald-500/20 text-base"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               Generate New Resume
             </Link>
           </div>
@@ -518,9 +518,9 @@ export default function ResumeStudioPage() {
             </p>
             <Link
               href="/dashboard/resumestudio/new"
-              className="inline-flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-black bg-gradient-to-r from-[#2DD4BF] to-[#10B981] text-sm shadow-lg shadow-emerald-500/20"
+              className="inline-flex items-center gap-2.5 px-10 py-4 rounded-xl font-bold text-black bg-gradient-to-r from-[#2DD4BF] to-[#10B981] text-base shadow-lg shadow-emerald-500/20"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               Create First Project
             </Link>
           </motion.div>
