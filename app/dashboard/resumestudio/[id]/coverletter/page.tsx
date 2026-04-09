@@ -17,11 +17,15 @@ import {
   CoverLetter,
 } from '@/lib/resumeStudio.api';
 import api from '@/lib/axios';
+import { useAuth } from '@/hooks/useAuth';
 
 // ─── Main Page ─────────────────────────────────
 export default function CoverLetterPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { user, refreshUser } = useAuth();
+  const userCredits = user?.credits ?? 0;
+
 
   const [record, setRecord] = useState<ResumeRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -63,6 +67,13 @@ export default function CoverLetterPage() {
   // Generate cover letter
   const handleGenerate = async () => {
     if (!record) return;
+
+    // Credit check
+    if (userCredits < 1) {
+      setError('Insufficient credits. You need 1 credit to generate a cover letter.');
+      return;
+    }
+
     setIsGenerating(true);
     setError(null);
 
@@ -73,8 +84,14 @@ export default function CoverLetterPage() {
       if (data.coverLetter) {
         setEditedLetter({ ...data.coverLetter });
       }
+      // Refresh user so header credit count updates
+      refreshUser();
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || 'Failed to generate cover letter.');
+      if (err?.response?.status === 402) {
+        setError('Insufficient credits. Please top up your balance.');
+      } else {
+        setError(err?.response?.data?.message || err?.message || 'Failed to generate cover letter.');
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -213,11 +230,25 @@ export default function CoverLetterPage() {
             </div>
             <button
               onClick={handleGenerate}
-              className="flex items-center gap-3 px-8 py-4 text-base font-bold rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-black hover:brightness-110 shadow-lg shadow-amber-500/20 transition-all font-black uppercase tracking-wide"
+              disabled={userCredits < 1}
+              className={cn(
+                "flex items-center gap-3 px-8 py-4 text-base font-bold rounded-xl shadow-lg transition-all font-black uppercase tracking-wide",
+                userCredits >= 1 
+                  ? "bg-gradient-to-r from-amber-500 to-orange-500 text-black hover:brightness-110 shadow-amber-500/20" 
+                  : "bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700 shadow-none"
+              )}
             >
-              <Zap className="w-5 h-5" />
-              Generate Cover Letter
+              <Zap className={cn("w-5 h-5", userCredits >= 1 ? "text-black" : "text-zinc-600")} />
+              {userCredits >= 1 ? 'Generate Cover Letter (1 credit)' : 'Need 1 Credit'}
             </button>
+            {userCredits < 1 && (
+              <Link 
+                href="/pricing"
+                className="text-xs font-bold text-amber-400 hover:text-amber-300 underline underline-offset-4"
+              >
+                Top up your credits
+              </Link>
+            )}
           </motion.div>
         )}
 

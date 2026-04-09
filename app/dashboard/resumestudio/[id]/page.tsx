@@ -18,6 +18,7 @@ import {
   ResumeRecord,
 } from '@/lib/resumeStudio.api';
 import api from '@/lib/axios';
+import { useAuth } from '@/hooks/useAuth';
 
 // ─── Generating overlay ────────────────────────
 function GeneratingOverlay({
@@ -137,6 +138,8 @@ function GeneratingOverlay({
 export default function ResumeProjectPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useAuth();
+  const userCredits = user?.credits ?? 0;
 
   const [record, setRecord] = useState<ResumeRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -446,7 +449,7 @@ export default function ResumeProjectPage() {
                     className={cn(
                       'w-full flex items-center justify-center gap-1.5 py-2 flex-1 text-[11px] sm:text-xs font-bold rounded-xl transition-all',
                       hasResume
-                        ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-black hover:brightness-105 shadow-lg shadow-blue-500/20'
+                        ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:brightness-105 shadow-lg shadow-blue-500/20'
                         : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
                     )}
                   >
@@ -509,7 +512,7 @@ export default function ResumeProjectPage() {
                     className={cn(
                       'w-full flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-xl transition-all',
                       hasResume
-                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-black shadow-lg shadow-emerald-500/20 hover:brightness-105'
+                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20 hover:brightness-105'
                         : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
                     )}
                   >
@@ -542,7 +545,12 @@ export default function ResumeProjectPage() {
                         <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider">Failed</span>
                       )}
                       {!hasEmailDraft && emailDraftStatus !== 'FAILED' && (
-                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Not Generated</span>
+                        <span className={cn(
+                          "text-[10px] font-bold uppercase tracking-wider",
+                          userCredits >= 1 ? 'text-zinc-500' : 'text-red-400'
+                        )}>
+                          🪙 1 credit
+                        </span>
                       )}
                     </div>
                   </div>
@@ -563,16 +571,26 @@ export default function ResumeProjectPage() {
                       View Email
                     </Link>
                 ) : (
-                  <Link
-                    href={`/dashboard/resumestudio/${id}/emaildraft`}
-                    className={cn(
-                      'w-full flex items-center justify-center gap-1.5 py-2 flex-1 text-[11px] sm:text-xs font-bold rounded-xl transition-all',
-                      'bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-lg shadow-violet-500/20 hover:brightness-105'
-                    )}
-                  >
-                    <Mail className="w-3.5 h-3.5" />
-                    Generate Email Draft
-                  </Link>
+                  userCredits >= 1 ? (
+                    <Link
+                      href={`/dashboard/resumestudio/${id}/emaildraft`}
+                      className={cn(
+                        'w-full flex items-center justify-center gap-1.5 py-2 flex-1 text-[11px] sm:text-xs font-bold rounded-xl transition-all',
+                        'bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-lg shadow-violet-500/20 hover:brightness-105'
+                      )}
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      Generate Email Draft (1 credit)
+                    </Link>
+                  ) : (
+                    <button
+                      disabled
+                      className="w-full flex items-center justify-center gap-1.5 py-2 flex-1 text-[11px] sm:text-xs font-bold rounded-xl bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700 font-black uppercase tracking-wider"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-zinc-600" />
+                      Insufficient Credits
+                    </button>
+                  )
                 )}
               </div>
             </div>
@@ -599,7 +617,12 @@ export default function ResumeProjectPage() {
                         <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider">Failed</span>
                       )}
                       {!hasCoverLetter && coverLetterStatus !== 'FAILED' && (
-                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Not Generated</span>
+                        <span className={cn(
+                          "text-[10px] font-bold uppercase tracking-wider",
+                          userCredits >= 1 ? 'text-zinc-500' : 'text-red-400'
+                        )}>
+                          🪙 1 credit
+                        </span>
                       )}
                     </div>
                   </div>
@@ -620,28 +643,36 @@ export default function ResumeProjectPage() {
                       View Letter
                     </Link>
                 ) : (
-                  <Link
-                    href={`/dashboard/resumestudio/${id}/coverletter`}
-                    className={cn(
-                      'w-full flex items-center justify-center gap-1.5 py-2 flex-1 text-[11px] sm:text-xs font-bold rounded-xl transition-all',
-                      'bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-lg shadow-amber-500/20 hover:brightness-105'
-                    )}
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    Generate Cover Letter
-                  </Link>
+                  userCredits >= 1 ? (
+                    <Link
+                      href={`/dashboard/resumestudio/${id}/coverletter`}
+                      className={cn(
+                        'w-full flex items-center justify-center gap-1.5 py-2 flex-1 text-[11px] sm:text-xs font-bold rounded-xl transition-all',
+                        'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/20 hover:brightness-105'
+                      )}
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      Generate Cover Letter (1 credit)
+                    </Link>
+                  ) : (
+                    <button
+                      disabled
+                      className="w-full flex items-center justify-center gap-1.5 py-2 flex-1 text-[11px] sm:text-xs font-bold rounded-xl bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700 font-black uppercase tracking-wider"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-zinc-600" />
+                      Insufficient Credits
+                    </button>
+                  )
                 )}
               </div>
             </div>
           </motion.div>
 
           {/* Info note */}
-          {(!hasAnalysis || !hasGeneratedResume) && (
             <p className="text-center text-xs text-zinc-600 font-medium">
-              Powered by DeepSeek R1 reasoning model. Each generation takes 1–2 minutes.
-              <br />Generate analysis and resume independently — use only what you need.
+              Crafted with PitchDown AI Intelligence. Each generation is precision-tuned.
+              <br />Build your career artifacts independently — use only what you need.
             </p>
-          )}
         </div>
       </div>
     </>

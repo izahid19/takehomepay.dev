@@ -207,7 +207,7 @@ export default function NewResumeProjectPage() {
             className={cn(
               'w-full py-4 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 transition-all',
               canSave
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-black shadow-lg shadow-emerald-500/20 hover:brightness-105'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20 hover:brightness-105'
                 : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
             )}
           >

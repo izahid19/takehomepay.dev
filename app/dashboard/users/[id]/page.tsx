@@ -155,6 +155,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
                    {user.email}
                 </span>
                 <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                  user.plan === 'superpro' ? 'bg-purple-500/10 text-purple-500' : 
                   user.plan === 'pro' ? 'bg-orange-500/10 text-orange-500' : 
                   user.plan === 'elite' ? 'bg-blue-500/10 text-blue-500' : 
                   'bg-zinc-800 text-zinc-400'
@@ -259,6 +260,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
                           <SelectItem value="free" className="focus:bg-zinc-900 cursor-pointer">FREE (10 Credits)</SelectItem>
                           <SelectItem value="elite" className="focus:bg-zinc-900 cursor-pointer">ELITE (300 Credits)</SelectItem>
                           <SelectItem value="pro" className="focus:bg-zinc-900 cursor-pointer">PRO (1000 Credits)</SelectItem>
+                          <SelectItem value="superpro" className="focus:bg-zinc-900 cursor-pointer font-black text-purple-400">SUPERPRO (1000 Credits)</SelectItem>
                         </SelectContent>
                       </Select>
                       <p className="text-[10px] text-amber-500/80 font-bold uppercase tracking-tight flex items-center gap-1.5">
@@ -338,7 +340,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
                 Change Subscription Plan?
               </AlertDialogTitle>
               <AlertDialogDescription className="text-zinc-400 font-medium leading-relaxed">
-                Updating to the <span className="text-emerald-400 font-bold">{editPlan.toUpperCase()}</span> plan will reset this user's credits to <span className="text-white font-bold">{editPlan === 'pro' ? '1000' : editPlan === 'elite' ? '300' : '10'}</span>.
+                Updating to the <span className="text-emerald-400 font-bold">{editPlan.toUpperCase()}</span> plan will reset this user's credits to <span className="text-white font-bold">{editPlan === 'superpro' || editPlan === 'pro' ? '1000' : editPlan === 'elite' ? '300' : '10'}</span>.
               </AlertDialogDescription>
             </div>
           </AlertDialogHeader>

@@ -232,7 +232,7 @@ export default function ResumePreviewPage() {
             <button
               onClick={handleDownload}
               disabled={isDownloading}
-              className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black transition-all disabled:opacity-60"
+              className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white transition-all disabled:opacity-60"
             >
               {isDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
               {isDownloading ? 'Downloading...' : 'Download PDF'}
@@ -272,7 +272,7 @@ export default function ResumePreviewPage() {
         <button
           onClick={handleDownload}
           disabled={isDownloading}
-          className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm bg-gradient-to-r from-emerald-500 to-teal-500 text-black hover:brightness-105 transition-all disabled:opacity-60"
+          className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:brightness-105 transition-all disabled:opacity-60"
         >
           {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
           {isDownloading ? 'Downloading...' : 'Download as PDF'}

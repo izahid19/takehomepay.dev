@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Save, Download, Loader2, Trash2, Plus,
-  User, Briefcase, Code2, FolderKanban, GraduationCap,
+  User, Briefcase, Code2, FolderKanban, GraduationCap, RotateCcw,
 } from 'lucide-react';
 
 // ── Types ────────────────────────────────────
@@ -69,6 +69,8 @@ export interface ResumeEditorProps {
   onSave?: (data: ResumeEditorData) => Promise<ResumeEditorData | void>;
   /** Called when downloading */
   onDownload?: () => Promise<void>;
+  /** Called when deleting */
+  onDelete?: () => Promise<void>;
   /** If true, save/download buttons are shown */
   showSave?: boolean;
   showDownload?: boolean;
@@ -87,6 +89,7 @@ export default function ResumeEditor({
   backLabel = 'Back',
   onSave,
   onDownload,
+  onDelete,
   showSave = true,
   showDownload = true,
   saveLabel = 'Save',
@@ -95,6 +98,8 @@ export default function ResumeEditor({
   const [originalData, setOriginalData] = useState<ResumeEditorData>(initialData);
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>('personal');
   const previewRef = useRef<HTMLIFrameElement>(null);
 
@@ -138,6 +143,18 @@ export default function ResumeEditor({
     }
   };
 
+  // ── Delete handler ──────────────────────────
+  const handleDelete = async () => {
+    if (!onDelete) return;
+    setDeleting(true);
+    try {
+      await onDelete();
+      setShowDeleteConfirm(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   // ── Live preview HTML ───────────────────────
   const previewHtml = generatePreviewHtml(data);
 
@@ -148,6 +165,21 @@ export default function ResumeEditor({
         doc.open();
         doc.write(previewHtml);
         doc.close();
+
+        // Optional: adjust height to fit content
+        const updateHeight = () => {
+          if (previewRef.current && previewRef.current.contentDocument) {
+            const body = previewRef.current.contentDocument.body;
+            if (body) {
+              const height = body.scrollHeight;
+              // If we use scale(0.9) on the container, we need to adjust the iframe height
+              previewRef.current.style.height = `${height + 50}px`;
+            }
+          }
+        };
+
+        // Give it a moment to render
+        setTimeout(updateHeight, 100);
       }
     }
   }, [previewHtml]);
@@ -167,6 +199,19 @@ export default function ResumeEditor({
           </h1>
         </div>
         <div className="flex items-center gap-3">
+          {onDelete && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="w-auto h-9 text-amber-500/70 hover:text-amber-500 hover:bg-amber-500/10 rounded-full transition-colors gap-2 px-4 font-bold"
+              title="Reset AI Generation"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span className="hidden sm:inline">Reset</span>
+            </Button>
+          )}
+
           {showDownload && onDownload && (
             <Button variant="outline" size="sm" onClick={handleDownload} disabled={downloading}
               className="gap-2 h-9 border-border/50 shadow-sm rounded-full px-4 hover:bg-muted/50 transition-colors">
@@ -243,18 +288,71 @@ export default function ResumeEditor({
         <div className="hidden lg:flex flex-1 flex-col bg-neutral-900 border-l border-border/20 overflow-hidden relative isolate">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-neutral-800/40 via-neutral-950 to-neutral-950 pointer-events-none -z-10" />
 
-          <div className="flex-1 overflow-auto flex justify-center py-10 px-8">
-            <div className="w-full max-w-[794px] bg-white shadow-2xl rounded shadow-black/40 ring-1 ring-white/10" style={{ minHeight: '1123px' }}>
+          <div className="flex-1 overflow-auto flex justify-center py-10 px-8 bg-neutral-900/50">
+            <div className="w-full max-w-[720px] transition-all duration-300 origin-top" style={{ transform: 'scale(0.85)' }}>
               <iframe
                 ref={previewRef}
                 title="Resume Preview"
-                className="w-full h-full border-0 rounded"
-                style={{ minHeight: '1123px' }}
+                className="w-full border-0 rounded-sm"
+                style={{ height: '1123px', minHeight: '1123px', background: '#18181b' }}
               />
             </div>
           </div>
         </div>
       </div>
+
+      {/* ── Confirmation Modal ────────────────── */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 text-left">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !deleting && setShowDeleteConfirm(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-sm bg-background border border-border p-6 rounded-3xl shadow-2xl space-y-6"
+            >
+              <div className="flex flex-col items-center text-center space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                  <RotateCcw className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-lg font-bold">Clear AI Generation?</h3>
+                  <p className="text-sm text-zinc-500">
+                    This will remove the current AI-tailored resume draft. Your project and job description will be preserved so you can select a different model or try again.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1 rounded-xl h-11 transition-all"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={deleting}
+                >
+                  Keep Draft
+                </Button>
+                <Button
+                  variant="default"
+                  className="flex-1 rounded-xl h-11 bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 gap-2 font-bold transition-all"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                >
+                  {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                  Clear Draft
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -668,8 +766,45 @@ export function generatePreviewHtml(data: ResumeEditorData): string {
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'EB Garamond', Georgia, 'Times New Roman', serif; font-size: 10.5pt; color: #000; background: #fff; line-height: 1.3; }
-  .page { width: 210mm; min-height: 297mm; max-height: 297mm; overflow: hidden; margin: 0 auto; padding: 12mm 16mm; background: #fff; transform: scale(0.9); transform-origin: top center; }
+  body { 
+    font-family: 'EB Garamond', Georgia, 'Times New Roman', serif; 
+    font-size: 10.5pt; 
+    color: #000; 
+    background: transparent; 
+    line-height: 1.3; 
+    padding: 20px 0;
+  }
+  .page { 
+    width: 210mm; 
+    min-height: 297mm; 
+    margin: 0 auto; 
+    padding: 12mm 16mm; 
+    background: #fff; 
+    position: relative; 
+    box-shadow: 0 0 20px rgba(0,0,0,0.2);
+  }
+  .section-title, .exp-block, .proj-block, .edu-block, .skills-block, .skill-row { page-break-inside: avoid; break-inside: avoid; }
+  
+  /* Page break markers for preview */
+  @media screen {
+    .page::before {
+      content: "PAGE 1";
+      position: absolute;
+      top: 0;
+      right: -40px;
+      font-size: 10px;
+      color: #666;
+    }
+    .page::after {
+      content: "";
+      position: absolute;
+      top: 297mm;
+      left: 0;
+      right: 0;
+      border-top: 1px dashed #ddd;
+      pointer-events: none;
+    }
+  }
   .header { text-align: center; margin-bottom: 4px; }
   .header h1 { font-family: 'EB Garamond', Georgia, serif; font-size: 26pt; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; line-height: 1.1; margin-bottom: 3px; }
   .contact-bar { font-size: 9.5pt; color: #000; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 0 6px; }
@@ -698,7 +833,7 @@ export function generatePreviewHtml(data: ResumeEditorData): string {
   .edu-school { font-style: italic; font-size: 10pt; margin-top: 0; }
   .proj-block { margin-top: 5px; }
   .proj-title { font-weight: 700; font-size: 10.5pt; margin-bottom: 2px; }
-  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page { width: 100%; max-height: 297mm; overflow: hidden; padding: 10mm 15mm; } }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page { width: 100%; padding: 10mm 15mm; } }
 </style>
 </head>
 <body>

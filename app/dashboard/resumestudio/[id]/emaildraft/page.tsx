@@ -17,11 +17,15 @@ import {
   EmailDraft,
 } from '@/lib/resumeStudio.api';
 import api from '@/lib/axios';
+import { useAuth } from '@/hooks/useAuth';
 
 // ─── Main Page ─────────────────────────────────
 export default function EmailDraftPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { user, refreshUser } = useAuth();
+  const userCredits = user?.credits ?? 0;
+
 
   const [record, setRecord] = useState<ResumeRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,6 +68,13 @@ export default function EmailDraftPage() {
   // Auto-generate if no draft exists
   const handleGenerate = async () => {
     if (!record) return;
+    
+    // Credit check
+    if (userCredits < 1) {
+      setError('Insufficient credits. You need 1 credit to generate an email draft.');
+      return;
+    }
+
     setIsGenerating(true);
     setError(null);
 
@@ -74,8 +85,14 @@ export default function EmailDraftPage() {
       if (data.emailDraft) {
         setEditedDraft({ ...data.emailDraft });
       }
+      // Refresh user so header credit count updates
+      refreshUser();
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || 'Failed to generate email draft.');
+      if (err?.response?.status === 402) {
+        setError('Insufficient credits. Please top up your balance.');
+      } else {
+        setError(err?.response?.data?.message || err?.message || 'Failed to generate email draft.');
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -221,11 +238,25 @@ export default function EmailDraftPage() {
             </div>
             <button
               onClick={handleGenerate}
-              className="flex items-center gap-3 px-8 py-4 text-base font-bold rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 text-white hover:brightness-110 shadow-lg shadow-violet-500/20 transition-all font-black uppercase tracking-wide"
+              disabled={userCredits < 1}
+              className={cn(
+                "flex items-center gap-3 px-8 py-4 text-base font-bold rounded-xl shadow-lg transition-all font-black uppercase tracking-wide",
+                userCredits >= 1 
+                  ? "bg-gradient-to-r from-violet-500 to-indigo-500 text-white hover:brightness-110 shadow-violet-500/20" 
+                  : "bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700 shadow-none"
+              )}
             >
-              <Zap className="w-5 h-5" />
-              Generate Email Draft
+              <Zap className={cn("w-5 h-5", userCredits >= 1 ? "text-white" : "text-zinc-600")} />
+              {userCredits >= 1 ? 'Generate Email Draft (1 credit)' : 'Need 1 Credit'}
             </button>
+            {userCredits < 1 && (
+              <Link 
+                href="/pricing"
+                className="text-xs font-bold text-violet-400 hover:text-violet-300 underline underline-offset-4"
+              >
+                Top up your credits
+              </Link>
+            )}
           </motion.div>
         )}
 

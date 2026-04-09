@@ -161,6 +161,7 @@ export function Header() {
                      <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest w-12 text-right">Plan</span>
                      <span className={cn(
                        "text-[9px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-widest leading-none",
+                       user.plan === 'superpro' ? 'text-purple-500 bg-purple-500/10' : 
                        user.plan === 'pro' ? 'text-orange-500 bg-orange-500/10' : 
                        user.plan === 'elite' ? 'text-blue-500 bg-blue-500/10' : 
                        'text-emerald-400 bg-emerald-400/10'

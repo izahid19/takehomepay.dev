@@ -2,9 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Loader2, BarChart3, Sparkles, FileText, Shield, Code2, Wrench, TrendingUp, ArrowLeft, Zap, ShieldCheck } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 import { showToast } from '@/lib/toast';
 import {
   getResumeByIdApi,
@@ -14,17 +12,31 @@ import {
 } from '@/lib/resumeStudio.api';
 import api from '@/lib/axios';
 import ResumeEditor, { ResumeEditorData } from '@/components/resumestudio/ResumeEditor';
+import { useAuth } from '@/hooks/useAuth';
 
-// ─── Main Page ─────────────────────────────────
+// New specialized components
+import { ModelSelectionView, ResumeModel } from './components/GenerationModelSelection';
+import { GenerationLoadingView } from './components/GenerationLoadingView';
+import { GenerationErrorView } from './components/GenerationErrorView';
+
 export default function GeneratedResumePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { user, refreshUser } = useAuth();
+  const userCredits = user?.credits ?? 0;
+
   const [record, setRecord] = useState<ResumeRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isPreparing, setIsPreparing] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch the project record
+  // Selection state
+  const [showModelSelection, setShowModelSelection] = useState(false);
+  const [pendingRawText, setPendingRawText] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<ResumeModel>('pitchdown-pro');
+
+  // Fetch record
   const fetchRecord = useCallback(async () => {
     try {
       const data = await getResumeByIdApi(id);
@@ -38,9 +50,7 @@ export default function GeneratedResumePage() {
     }
   }, [id]);
 
-  const [isPreparing, setIsPreparing] = useState(true);
-
-  // On mount: Fetch record, then auto-trigger generation if needed
+  // On mount
   useEffect(() => {
     let cancelled = false;
 
@@ -48,7 +58,6 @@ export default function GeneratedResumePage() {
       const data = await fetchRecord();
       if (cancelled) return;
 
-      // If resume doesn't exist yet, auto-trigger generation
       if (data && !data.newResumeContent) {
         try {
           const profileRes = await api.get('/profile');
@@ -60,17 +69,12 @@ export default function GeneratedResumePage() {
           }
           if (cancelled) return;
 
-          setIsGenerating(true);
-          const updated = await generateResumeForProjectApi(id, rawText);
-          if (!cancelled) {
-            setRecord(updated);
-            setIsGenerating(false);
-            setIsPreparing(false);
-          }
+          setPendingRawText(rawText);
+          setShowModelSelection(true);
+          setIsPreparing(false);
         } catch (err: any) {
           if (!cancelled) {
-            setError(err?.response?.data?.message || err?.message || 'Resume generation failed.');
-            setIsGenerating(false);
+            setError(err?.response?.data?.message || err?.message || 'Failed to load profile.');
             setIsPreparing(false);
           }
         }
@@ -82,182 +86,64 @@ export default function GeneratedResumePage() {
     return () => { cancelled = true; };
   }, [id, fetchRecord]);
 
-  // ── Loading ──────────────────────────────────
-  if (isLoading) {
-    return (
-      <div className="h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      </div>
-    );
-  }
+  const handleModelSelect = async (model: ResumeModel) => {
+    setShowModelSelection(false);
+    setSelectedModel(model);
+    if (!pendingRawText) return;
 
-  // ── Error / No resume ────────────────────────
-  if (!isGenerating && !isPreparing && (error || !record?.newResumeContent)) {
+    setIsGenerating(true);
+    try {
+      const updated = await generateResumeForProjectApi(id, pendingRawText, model);
+      setRecord(updated);
+      refreshUser();
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err?.message || 'Resume generation failed.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // 1. Initial Loading
+  if (isLoading || isPreparing) {
     return (
-      <div className="relative min-h-full pb-20">
-        <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
-          <div className="absolute inset-0 bg-[radial-gradient(#1d1d1d_1px,transparent_1px)] [background-size:24px_24px]" />
-        </div>
-        <div className="relative z-10 h-[60vh] flex flex-col items-center justify-center gap-4 p-8">
-          <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center">
-            <Sparkles className="w-8 h-8 text-red-400" />
-          </div>
-          <p className="text-white font-bold text-lg">Resume not available</p>
-          <p className="text-zinc-500 text-sm text-center max-w-sm">
-            {error || 'Something went wrong generating the resume.'}
-          </p>
-          <button
-            onClick={() => router.push(`/dashboard/resumestudio/${id}`)}
-            className="text-sm text-primary hover:underline font-medium"
-          >
-            ← Back to Project
-          </button>
+      <div className="h-[80vh] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+           <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
+           <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">Initializing Studio</p>
         </div>
       </div>
     );
   }
 
-  // ── Handling isGenerating ─────────────────────
+  // 2. Model Picker
+  if (showModelSelection) {
+    return (
+      <ModelSelectionView
+        onSelect={handleModelSelect}
+        onBack={() => router.push(`/dashboard/resumestudio/${id}`)}
+        userCredits={userCredits}
+        userPlan={user?.plan}
+      />
+    );
+  }
+
+  // 3. Generation Loader
   if (isGenerating) {
+    return <GenerationLoadingView selectedModel={selectedModel} />;
+  }
+
+  // 4. Error State
+  if (error || !record?.newResumeContent) {
     return (
-      <div className="relative min-h-screen pb-20">
-        <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
-          <div className="absolute inset-0 bg-[radial-gradient(#1d1d1d_1px,transparent_1px)] [background-size:24px_24px]" />
-        </div>
-
-        <div className="relative z-10 max-w-5xl mx-auto px-6 space-y-8 pt-12">
-          {/* Back */}
-          <button
-            onClick={() => router.push(`/dashboard/resumestudio/${id}`)}
-            className="inline-flex items-center text-sm font-medium text-zinc-400 hover:text-white transition-colors bg-zinc-900/50 hover:bg-zinc-800 border border-zinc-800 rounded-lg px-3 py-1.5"
-          >
-            <ArrowLeft className="mr-2 w-4 h-4" />
-            Back to Project
-          </button>
-
-          {/* Full Screen Loading State (Rich Animation) */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="fixed inset-0 z-10 flex flex-col items-center justify-center bg-black pt-20"
-          >
-            {/* Background Effects */}
-            <div className="absolute inset-0 z-0 pointer-events-none opacity-20">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.15)_0%,transparent_70%)]" />
-              <div className="absolute inset-0 bg-[radial-gradient(#1d1d1d_1px,transparent_1px)] [background-size:24px_24px]" />
-            </div>
-
-            <div className="relative z-10 flex flex-col items-center gap-12 w-full max-w-3xl px-6">
-              {/* Visual Indicator (Large) */}
-              <div className="relative">
-                <div className="w-32 h-32 rounded-3xl bg-emerald-500/5 flex items-center justify-center border border-emerald-500/10 shadow-[0_0_50px_-12px_rgba(16,185,129,0.3)]">
-                  <motion.div
-                    animate={{ 
-                      scale: [1, 1.1, 1],
-                      rotate: [0, 5, -5, 0]
-                    }}
-                    transition={{ 
-                      duration: 4,
-                      repeat: Infinity,
-                      ease: "easeInOut"
-                    }}
-                  >
-                    <Sparkles className="w-14 h-14 text-emerald-400" />
-                  </motion.div>
-                </div>
-                
-                {/* Orbiting particles */}
-                {[0, 72, 144, 216, 288].map((angle, i) => (
-                  <motion.div
-                    key={i}
-                    className="absolute w-1.5 h-1.5 rounded-full bg-emerald-400/40"
-                    animate={{
-                      rotate: [angle, angle + 360],
-                    }}
-                    transition={{
-                      duration: 20,
-                      repeat: Infinity,
-                      ease: "linear"
-                    }}
-                    style={{
-                      transformOrigin: '70px 70px',
-                      left: 'calc(50% - 70px)',
-                      top: 'calc(50% - 70px)',
-                    }}
-                  />
-                ))}
-              </div>
-
-              {/* Status Steps */}
-              <div className="text-center space-y-6 w-full">
-                <div className="h-8 overflow-hidden relative">
-                  <AnimatePresence mode="wait">
-                    <motion.p
-                      key={Math.floor(Date.now() / 4000) % 6}
-                      initial={{ y: 30, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      exit={{ y: -30, opacity: 0 }}
-                      className="text-2xl font-black text-white uppercase tracking-[0.2em]"
-                    >
-                      {[
-                        "Analyzing Original Content...",
-                        "Reading Job Requirements...",
-                        "Tailoring Work History...",
-                        "Optimizing for ATS Systems...",
-                        "Rearranging Sections...",
-                        "Finalizing Tailored Resume..."
-                      ][Math.floor(Date.now() / 4000) % 6]}
-                    </motion.p>
-                  </AnimatePresence>
-                </div>
-                
-                {/* Large Progress Bar */}
-                <div className="w-full space-y-3">
-                  <div className="h-2 w-full bg-zinc-900 rounded-full overflow-hidden border border-zinc-800 shadow-inner">
-                    <motion.div
-                      className="h-full bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600 bg-[length:200%_100%]"
-                      animate={{ backgroundPosition: ["0% 0%", "100% 0%"] }}
-                      transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                      initial={{ width: "0%" }}
-                      style={{ width: "0%" }}
-                      whileInView={{ width: "95%" }}
-                    />
-                  </div>
-                  <div className="flex justify-between items-center px-1">
-                    <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">
-                      Deep Reasoning · DeepSeek R1
-                    </p>
-                    <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">
-                      Est. 60s
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bottom detail row */}
-              <div className="flex items-center gap-12 pt-8 border-t border-zinc-800/30 w-full justify-center">
-                <div className="flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-emerald-400/50" />
-                  <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Perfect Match</span>
-                </div>
-                <div className="flex items-center gap-2">
-                   <ShieldCheck className="w-4 h-4 text-emerald-400/50" />
-                  <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider">ATS Secure</span>
-                </div>
-                <div className="flex items-center gap-2">
-                   <FileText className="w-4 h-4 text-emerald-400/50" />
-                  <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Standard PDF</span>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </div>
+      <GenerationErrorView 
+        error={error} 
+        onBack={() => router.push(`/dashboard/resumestudio/${id}`)} 
+      />
     );
   }
 
-  // ── Convert the flat ResumeContent to ResumeEditorData ──
-  const rc = record?.newResumeContent;
+  // 5. Success State - Editor
+  const rc = record.newResumeContent;
   const editorData: ResumeEditorData = {
     fullName: rc?.fullName ?? '',
     email: rc?.email ?? '',
@@ -298,10 +184,8 @@ export default function GeneratedResumePage() {
             projects: data.projects,
           });
           const saved = res.data.data;
-          // Update local record
           setRecord(saved);
           showToast.success('Resume saved!');
-          // Return the saved newResumeContent as editor data
           const src = saved.newResumeContent;
           return {
             fullName: src.fullName ?? '',
@@ -334,6 +218,16 @@ export default function GeneratedResumePage() {
           showToast.success('Resume downloaded!');
         } catch {
           showToast.error('Download failed');
+        }
+      }}
+      onDelete={async () => {
+        try {
+          await api.post(`/resume/${id}/reset`);
+          showToast.success('Resume draft cleared');
+          window.location.reload();
+        } catch {
+          showToast.error('Failed to reset');
+          throw new Error('Reset failed');
         }
       }}
     />

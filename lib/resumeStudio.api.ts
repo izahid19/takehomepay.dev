@@ -206,14 +206,16 @@ export async function generateForProjectApi(
 /**
  * POST /resume/:id/analyze
  * Triggers AI analysis ONLY for a saved project.
+ * model: 'deepseek' | 'claude-haiku' | 'claude-sonnet' (default: 'deepseek')
  */
 export async function analyzeForProjectApi(
   id: string,
-  resumeText: string
+  resumeText: string,
+  model: 'pitchdown-pro' | 'pitchdown-fast' | 'pitchdown-premium-lite' = 'pitchdown-pro'
 ): Promise<ResumeRecord> {
   const response = await api.post<{ status: string; data: ResumeRecord }>(
     `/resume/${id}/analyze`,
-    { resumeText },
+    { resumeText, model },
     { timeout: 180_000 }
   );
   return response.data.data;
@@ -222,14 +224,16 @@ export async function analyzeForProjectApi(
 /**
  * POST /resume/:id/generate-resume
  * Triggers AI resume generation ONLY for a saved project.
+ * model: 'deepseek-reasoner' | 'deepseek-chat' | 'claude-haiku' | 'claude-sonnet'
  */
 export async function generateResumeForProjectApi(
   id: string,
-  resumeText: string
+  resumeText: string,
+  model: 'pitchdown-pro' | 'pitchdown-fast' | 'pitchdown-premium-lite' | 'pitchdown-premium' = 'pitchdown-pro'
 ): Promise<ResumeRecord> {
   const response = await api.post<{ status: string; data: ResumeRecord }>(
     `/resume/${id}/generate-resume`,
-    { resumeText },
+    { resumeText, model },
     { timeout: 180_000 }
   );
   return response.data.data;

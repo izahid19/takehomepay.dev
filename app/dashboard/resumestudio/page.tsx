@@ -475,7 +475,7 @@ export default function ResumeStudioPage() {
             </div>
             <Link
               href="/dashboard/resumestudio/new"
-              className="inline-flex items-center gap-2.5 px-8 py-4 rounded-xl font-black text-black bg-gradient-to-r from-[#2DD4BF] to-[#10B981] hover:brightness-105 transition-all shadow-lg shadow-emerald-500/20 text-base"
+              className="inline-flex items-center gap-2.5 px-8 py-4 rounded-xl font-black text-white bg-gradient-to-r from-[#2DD4BF] to-[#10B981] hover:brightness-105 transition-all shadow-lg shadow-emerald-500/20 text-base"
             >
               <Plus className="w-5 h-5" />
               Generate New Resume
@@ -504,7 +504,7 @@ export default function ResumeStudioPage() {
             </p>
             <Link
               href="/dashboard/resumestudio/new"
-              className="inline-flex items-center gap-2.5 px-10 py-4 rounded-xl font-bold text-black bg-gradient-to-r from-[#2DD4BF] to-[#10B981] text-base shadow-lg shadow-emerald-500/20"
+              className="inline-flex items-center gap-2.5 px-10 py-4 rounded-xl font-bold text-white bg-gradient-to-r from-[#2DD4BF] to-[#10B981] text-base shadow-lg shadow-emerald-500/20"
             >
               <Plus className="w-5 h-5" />
               Create First Project

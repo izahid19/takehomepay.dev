@@ -40,18 +40,18 @@ export function CreditModal({ isOpen, onClose }: CreditModalProps) {
         <div className="space-y-4">
           <h3 className="text-2xl font-bold tracking-tight">Credits Exhausted</h3>
           <p className="text-muted-foreground leading-relaxed">
-            You&apos;ve used all your free credits. To continue generating high-converting AI proposals, please upgrade to our Pro plan.
+            You&apos;ve used all your credits. To continue generating high-converting AI proposals, please upgrade to one of our premium plans.
           </p>
 
           <div className="bg-muted px-4 py-3 rounded-xl border border-border flex items-center gap-3">
              <ShieldAlert className="w-5 h-5 text-primary" />
-             <span className="text-sm font-medium">Get unlimited proposals for $19/mo</span>
+             <span className="text-sm font-medium">Get more credits starting at ₹200/mo</span>
           </div>
         </div>
 
         <div className="mt-8 flex flex-col gap-3">
-          <Button className="w-full h-12 text-base font-bold" onClick={() => window.location.href = '/pricing'}>
-            Upgrade to Pro
+          <Button className="w-full h-12 text-base font-bold bg-primary text-black" onClick={() => window.location.href = '/pricing'}>
+            View Premium Plans
           </Button>
           <Button variant="ghost" className="w-full h-12" onClick={onClose}>
             Maybe Later
