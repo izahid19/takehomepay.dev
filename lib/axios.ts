@@ -8,8 +8,6 @@ const api = axios.create({
   withCredentials: true, // Send cookies with requests
 });
 
-console.log("hello ji");
-
 // Add interceptor to include token
 api.interceptors.request.use((config) => {
   const token = Cookies.get('access_token');

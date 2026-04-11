@@ -20,9 +20,9 @@ export function GenerationLoadingView({
       <div className="absolute inset-0 pointer-events-none">
         <div className={cn(
           "absolute inset-0 opacity-20",
-          selectedModel === 'deepseek-reasoner' ? "bg-emerald-500/10" : 
-          selectedModel === 'deepseek-chat' ? "bg-amber-500/10" :
-          selectedModel === 'claude-haiku' ? "bg-sky-500/10" : "bg-violet-500/10"
+          selectedModel === 'pitchdown-pro' ? "bg-emerald-500/10" : 
+          selectedModel === 'pitchdown-fast' ? "bg-amber-500/10" :
+          selectedModel === 'pitchdown-premium-lite' ? "bg-sky-500/10" : "bg-violet-500/10"
         )} />
         <div className="absolute inset-0 bg-[radial-gradient(#1d1d1d_1px,transparent_1px)] [background-size:40px_40px] opacity-40" />
         
