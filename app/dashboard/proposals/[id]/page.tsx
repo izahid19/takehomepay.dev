@@ -83,7 +83,7 @@ export default function ViewProposalPage() {
 
   return (
     <div className="min-h-screen bg-background text-zinc-300 pb-20 selection:bg-[#FFB800]/30">
-      <div className="max-w-6xl mx-auto px-6 pt-10 space-y-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10 space-y-8 sm:space-y-12">
         {/* Back Button */}
         <Link 
           href="/dashboard/proposals" 
@@ -108,73 +108,76 @@ export default function ViewProposalPage() {
         </div>
 
         {/* Timestamps Section */}
-        <div className="flex justify-between items-center text-[13px] text-zinc-500 font-medium">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 text-[13px] text-zinc-500 font-medium">
           <div>
             <p className="uppercase tracking-[0.1em] mb-1">Created At:</p>
             <p className="text-zinc-400">{format(new Date(proposal.createdAt), 'M/d/yyyy, h:mm:ss a')}</p>
           </div>
-          <div className="text-right">
+          <div className="sm:text-right">
             <p className="uppercase tracking-[0.1em] mb-1">Updated At:</p>
             <p className="text-zinc-400">{format(new Date(proposal.updatedAt), 'M/d/yyyy, h:mm:ss a')}</p>
           </div>
         </div>
 
         {/* Action Bar */}
-        <div className="flex items-center justify-between pt-2 border-t border-zinc-900">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-4 pt-2 border-t border-zinc-900">
+          {/* Primary actions row */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {!isEditing && (
               <Button 
                 onClick={() => setIsEditing(true)}
                 disabled={isFreePlan}
-                className={`bg-[#FFB800] hover:bg-[#E6A600] text-black font-bold rounded-md px-5 h-11 transition-all active:scale-95 shadow-lg shadow-[#FFB800]/10 ${isFreePlan ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
+                className={`flex-1 sm:flex-none bg-[#FFB800] hover:bg-[#E6A600] text-black font-bold rounded-md px-4 sm:px-5 h-10 sm:h-11 text-sm transition-all active:scale-95 shadow-lg shadow-[#FFB800]/10 ${isFreePlan ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
               >
-                {isFreePlan ? <Lock className="w-4 h-4 mr-2" /> : <PenLine className="w-4 h-4 mr-2" />}
+                {isFreePlan ? <Lock className="w-4 h-4 mr-2 shrink-0" /> : <PenLine className="w-4 h-4 mr-2 shrink-0" />}
                 Edit Proposal
               </Button>
             )}
             <Button 
-              className={`bg-[#D97706] hover:bg-[#C26A05] text-white font-bold rounded-md px-5 h-11 transition-all active:scale-95 shadow-lg shadow-[#D97706]/10 ${isFreePlan ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
+              className={`flex-1 sm:flex-none bg-[#D97706] hover:bg-[#C26A05] text-white font-bold rounded-md px-4 sm:px-5 h-10 sm:h-11 text-sm transition-all active:scale-95 shadow-lg shadow-[#D97706]/10 ${isFreePlan ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
               onClick={() => !isFreePlan && window.print()}
               disabled={isFreePlan}
             >
-              {isFreePlan ? <Lock className="w-4 h-4 mr-2" /> : <Download className="w-4 h-4 mr-2" />}
+              {isFreePlan ? <Lock className="w-4 h-4 mr-2 shrink-0" /> : <Download className="w-4 h-4 mr-2 shrink-0" />}
               Download PDF
             </Button>
             <Button 
               variant="outline"
               onClick={handleRegenerate}
               disabled={isFreePlan}
-              className={`bg-zinc-900 border-zinc-800 text-zinc-400 hover:bg-black hover:text-white font-bold rounded-md px-5 h-11 transition-all active:scale-95 shadow-lg group ${isFreePlan ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
+              className={`flex-1 sm:flex-none bg-zinc-900 border-zinc-800 text-zinc-400 hover:bg-black hover:text-white font-bold rounded-md px-4 sm:px-5 h-10 sm:h-11 text-sm transition-all active:scale-95 shadow-lg group ${isFreePlan ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
             >
-              <RefreshCw className="w-4 h-4 mr-2 group-hover:rotate-180 transition-transform duration-500" />
+              <RefreshCw className="w-4 h-4 mr-2 shrink-0 group-hover:rotate-180 transition-transform duration-500" />
               Regenerate
             </Button>
-            {isFreePlan && (
-              <Link href="/pricing" className="text-xs font-bold text-amber-500 hover:text-amber-400 transition-colors uppercase tracking-widest pl-2">
+          </div>
+          {/* Secondary row: upgrade link + copy */}
+          <div className="flex items-center justify-between">
+            {isFreePlan ? (
+              <Link href="/pricing" className="text-xs font-bold text-amber-500 hover:text-amber-400 transition-colors uppercase tracking-widest">
                 Upgrade to Unlock
               </Link>
-            )}
+            ) : <span />}
+            <button 
+              onClick={copyToClipboard}
+              className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 transition-colors text-sm font-bold group ml-auto"
+            >
+              <span className="hidden sm:inline">{copied ? 'Copied to clipboard' : 'Copy to Clipboard'}</span>
+              {copied ? <Check className="w-4 h-4 text-[#FFB800]" /> : <Copy className="w-4 h-4 group-hover:scale-110 transition-transform" />}
+            </button>
           </div>
-          
-          <button 
-            onClick={copyToClipboard}
-            className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 transition-colors text-sm font-bold group"
-          >
-            {copied ? 'Copied to clipboard' : 'Copy to Clipboard'}
-            {copied ? <Check className="w-4 h-4 text-[#FFB800]" /> : <Copy className="w-4 h-4 group-hover:scale-110 transition-transform" />}
-          </button>
         </div>
 
         {/* Main Proposal Content */}
         <div className="bg-[#111111] rounded-xl border border-zinc-800/50 min-h-[500px] shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#FFB800]/0 via-[#FFB800]/20 to-[#FFB800]/0 opacity-50" />
           
-          <div className="p-12 pb-8">
+          <div className="p-5 sm:p-8 md:p-12 pb-8">
             {isEditing ? (
               <textarea
                 value={editedText}
                 onChange={(e) => setEditedText(e.target.value)}
-                className="w-full min-h-[500px] bg-transparent text-zinc-300 font-medium text-lg leading-relaxed focus:outline-none resize-none"
+                className="w-full min-h-[400px] sm:min-h-[500px] bg-transparent text-zinc-300 font-medium text-base sm:text-lg leading-relaxed focus:outline-none resize-none"
                 placeholder="Edit your proposal here..."
               />
             ) : (
@@ -186,7 +189,7 @@ export default function ViewProposalPage() {
 
           {/* Inline Editor Footer */}
           {isEditing && (
-            <div className="border-t border-zinc-900 bg-zinc-900/30 px-12 py-6 flex items-center justify-between">
+            <div className="border-t border-zinc-900 bg-zinc-900/30 px-4 sm:px-8 md:px-12 py-4 sm:py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-2 text-zinc-500 text-xs font-bold uppercase tracking-wider">
                 {editedText !== proposal.generatedText ? (
                   <div className="flex items-center gap-2 text-emerald-500">
@@ -197,7 +200,7 @@ export default function ViewProposalPage() {
                   "No changes made"
                 )}
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 w-full sm:w-auto">
                 <Button 
                   onClick={() => {
                     setIsEditing(false);
@@ -205,14 +208,14 @@ export default function ViewProposalPage() {
                   }}
                   disabled={saving}
                   variant="outline"
-                  className="bg-transparent border-zinc-800 text-zinc-400 hover:bg-black transition-all font-bold h-10 px-6 rounded-lg"
+                  className="flex-1 sm:flex-none bg-transparent border-zinc-800 text-zinc-400 hover:bg-black transition-all font-bold h-10 px-4 sm:px-6 rounded-lg"
                 >
                   Cancel
                 </Button>
                 <Button 
                   onClick={handleSave}
                   disabled={saving || editedText === proposal.generatedText}
-                  className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 disabled:text-zinc-600 disabled:border-zinc-700 text-white font-bold h-10 px-6 rounded-lg transition-all shadow-lg shadow-emerald-600/10"
+                  className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 disabled:text-zinc-600 disabled:border-zinc-700 text-white font-bold h-10 px-4 sm:px-6 rounded-lg transition-all shadow-lg shadow-emerald-600/10"
                 >
                   {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                   Save Changes

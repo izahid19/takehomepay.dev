@@ -113,18 +113,18 @@ export default function GeneratingProposalPage() {
 
   return (
     <div className="min-h-screen bg-background text-zinc-300 pb-20">
-      <div className="max-w-6xl mx-auto px-6 pt-16 space-y-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 sm:pt-16 space-y-8 sm:space-y-12">
         {/* AI Status Header */}
         <div className="text-center space-y-6">
           <div className="flex justify-center">
             <div className="relative">
-              <Sparkles className="w-16 h-16 text-[#FFB800] animate-pulse" />
+              <Sparkles className="w-12 h-12 sm:w-16 sm:h-16 text-[#FFB800] animate-pulse" />
               <div className="absolute inset-0 bg-[#FFB800]/20 blur-2xl rounded-full animate-pulse" />
             </div>
           </div>
           
           <div className="space-y-3">
-            <h1 className="text-3xl font-black text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               AI is crafting your proposal
             </h1>
             
@@ -132,7 +132,7 @@ export default function GeneratingProposalPage() {
             <div className="flex items-center justify-center gap-2 h-8">
               <p
                 key={currentStep}
-                className="text-zinc-400 font-medium text-lg animate-in fade-in slide-in-from-bottom-2 duration-500"
+                className="text-zinc-400 font-medium text-base sm:text-lg animate-in fade-in slide-in-from-bottom-2 duration-500"
               >
                 {AI_STATUS_STEPS[currentStep]}
               </p>

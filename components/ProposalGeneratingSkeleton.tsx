@@ -2,7 +2,7 @@
 
 export function ProposalGeneratingSkeleton() {
   return (
-    <div className="bg-[#111111] rounded-xl border border-zinc-800/50 min-h-[500px] shadow-2xl relative overflow-hidden p-12">
+    <div className="bg-[#111111] rounded-xl border border-zinc-800/50 min-h-[320px] sm:min-h-[500px] shadow-2xl relative overflow-hidden p-5 sm:p-8 md:p-12">
       {/* Subtle accent at the top */}
       <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#FFB800]/0 via-[#FFB800]/20 to-[#FFB800]/0 opacity-50" />
       

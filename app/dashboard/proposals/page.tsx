@@ -139,7 +139,7 @@ export default function ProposalsPage() {
             Back to Hub
           </Link>
           <div className="space-y-2">
-            <h1 className="text-4xl font-black tracking-tight text-white leading-tight">
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white leading-tight">
               My Proposals
             </h1>
             <p className="text-zinc-500 font-medium">
@@ -172,10 +172,11 @@ export default function ProposalsPage() {
             </button>
           </div>
 
-          <Button asChild className="h-12 px-6 bg-gradient-to-r from-[#2DD4BF] to-[#10B981] hover:brightness-105 active:scale-95 text-black font-extrabold border-none shadow-lg shadow-emerald-500/20 rounded-xl transition-all">
+          <Button asChild className="h-10 sm:h-12 px-4 sm:px-6 bg-gradient-to-r from-[#2DD4BF] to-[#10B981] hover:brightness-105 active:scale-95 text-black font-extrabold border-none shadow-lg shadow-emerald-500/20 rounded-xl transition-all text-sm sm:text-base">
             <Link href="/dashboard/proposals/new">
               <PlusCircle className="mr-2 h-5 w-5" />
-              New Proposal
+              <span className="hidden sm:inline">New Proposal</span>
+              <span className="sm:hidden">New</span>
             </Link>
           </Button>
         </div>
@@ -183,7 +184,7 @@ export default function ProposalsPage() {
 
       {/* Empty State */}
       {proposals.length === 0 ? (
-        <div className="relative z-10 bg-zinc-900/40 border-2 border-dashed border-zinc-800 rounded-3xl p-16 flex flex-col items-center text-center backdrop-blur-sm">
+        <div className="relative z-10 bg-zinc-900/40 border-2 border-dashed border-zinc-800 rounded-3xl p-8 sm:p-16 flex flex-col items-center text-center backdrop-blur-sm">
           <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6">
             <FileText className="h-10 w-10 text-emerald-500" />
           </div>
@@ -262,6 +263,8 @@ export default function ProposalsPage() {
       ) : (
         /* Table View */
         <div className="relative z-10 bg-[#09090b] border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-md">
+          {/* Mobile hint */}
+          <p className="sm:hidden px-4 py-2 text-[11px] text-zinc-600 font-medium border-b border-zinc-800/50">← Scroll to see all columns</p>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -347,7 +350,7 @@ export default function ProposalsPage() {
             <button
               onClick={() => goToPage(currentPage - 1)}
               disabled={currentPage === 1}
-              className="flex items-center justify-center w-9 h-9 rounded-lg border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="flex items-center justify-center w-10 h-10 rounded-lg border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
               aria-label="Previous page"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -363,7 +366,7 @@ export default function ProposalsPage() {
                 <button
                   key={page}
                   onClick={() => goToPage(page as number)}
-                  className={`w-9 h-9 rounded-lg text-sm font-bold transition-all border ${
+                  className={`w-10 h-10 rounded-lg text-sm font-bold transition-all border ${
                     currentPage === page
                       ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 shadow-lg shadow-emerald-500/10'
                       : 'border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'
@@ -380,7 +383,7 @@ export default function ProposalsPage() {
             <button
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage === pagination.totalPages}
-              className="flex items-center justify-center w-9 h-9 rounded-lg border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="flex items-center justify-center w-10 h-10 rounded-lg border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
               aria-label="Next page"
             >
               <ChevronRight className="w-4 h-4" />
