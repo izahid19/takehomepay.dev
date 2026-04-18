@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Plus, FileText, Download, Loader2, Trash2,
   ChevronDown, ChevronUp, Briefcase, Code2, GraduationCap,
   User, ExternalLink, Clock, CheckCircle2,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getResumesApi, downloadResumeApi, deleteResumeApi, ResumeRecord, ResumeContent } from '@/lib/resumeStudio.api';
+import { getResumesApi, downloadResumeApi, deleteResumeApi, ResumeRecord, ResumeContent, PaginatedResumesResponse } from '@/lib/resumeStudio.api';
 
 // ─────────────────────────────────────────────
 // Resume Detail Drawer — shows newResumeContent
@@ -354,30 +355,47 @@ const ResumeHistoryCard = ({
   );
 };
 
+const ITEMS_PER_PAGE = 9;
+
 // ─────────────────────────────────────────────
 // Main Page
 // ─────────────────────────────────────────────
 export default function ResumeStudioPage() {
   const [records, setRecords] = useState<ResumeRecord[]>([]);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1, page: 1, limit: ITEMS_PER_PAGE });
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [viewRecord, setViewRecord] = useState<ResumeRecord | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  useEffect(() => {
-    getResumesApi()
-      .then(setRecords)
-      .catch(console.error)
-      .finally(() => setLoading(false));
+  const fetchResumes = useCallback(async (page: number) => {
+    setLoading(true);
+    try {
+      const result = await getResumesApi(page, ITEMS_PER_PAGE);
+      setRecords(result.data);
+      setPagination({ total: result.total, totalPages: result.totalPages, page, limit: result.limit });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchResumes(currentPage);
+  }, [currentPage, fetchResumes]);
 
   const handleDeleteConfirm = async () => {
     if (!confirmDeleteId) return;
     setDeletingId(confirmDeleteId);
     try {
       await deleteResumeApi(confirmDeleteId);
-      setRecords((prev) => prev.filter((r) => r._id !== confirmDeleteId));
+      const isLastOnPage = records.length === 1 && currentPage > 1;
+      const nextPage = isLastOnPage ? currentPage - 1 : currentPage;
+      if (isLastOnPage) setCurrentPage(nextPage);
+      else fetchResumes(nextPage);
     } catch {
       alert('Failed to delete. Please try again.');
     } finally {
@@ -398,6 +416,27 @@ export default function ResumeStudioPage() {
       setDownloadingId(null);
     }
   };
+
+  // ── Pagination helpers ─────────────────────
+  const goToPage = (page: number) => {
+    if (page < 1 || page > pagination.totalPages) return;
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const getPageNumbers = () => {
+    const { totalPages, page } = pagination;
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const pages: (number | '...')[] = [1];
+    if (page > 3) pages.push('...');
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+    if (page < totalPages - 2) pages.push('...');
+    pages.push(totalPages);
+    return pages;
+  };
+
+  const startItem = (currentPage - 1) * ITEMS_PER_PAGE + 1;
+  const endItem   = Math.min(currentPage * ITEMS_PER_PAGE, pagination.total);
 
   return (
     <>
@@ -468,8 +507,8 @@ export default function ResumeStudioPage() {
               <h1 className="text-4xl font-black tracking-tight text-white">Resume Studio</h1>
               <p className="text-zinc-500 font-medium">
                 Your AI-tailored resume history.{' '}
-                {records.length > 0 && (
-                  <span className="text-emerald-500 font-semibold">{records.length} generated</span>
+                {pagination.total > 0 && (
+                  <span className="text-emerald-500 font-semibold">{pagination.total} generated</span>
                 )}
               </p>
             </div>
@@ -529,6 +568,57 @@ export default function ResumeStudioPage() {
               ))}
             </AnimatePresence>
           </motion.div>
+        )}
+
+        {/* ── Pagination Bar ── */}
+        {pagination.totalPages > 1 && (
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            {/* Counter */}
+            <p className="text-sm text-zinc-500 font-medium">
+              Showing <span className="text-zinc-300 font-bold">{startItem}–{endItem}</span> of{' '}
+              <span className="text-zinc-300 font-bold">{pagination.total}</span> projects
+            </p>
+            {/* Controls */}
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="flex items-center justify-center w-10 h-10 rounded-lg border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                aria-label="Previous page"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              {getPageNumbers().map((page, idx) =>
+                page === '...' ? (
+                  <span key={`ellipsis-${idx}`} className="w-10 h-10 flex items-center justify-center text-zinc-600 text-sm font-bold select-none">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={page}
+                    onClick={() => goToPage(page as number)}
+                    className={`w-10 h-10 rounded-lg text-sm font-bold transition-all border ${
+                      currentPage === page
+                        ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 shadow-lg shadow-emerald-500/10'
+                        : 'border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'
+                    }`}
+                    aria-label={`Page ${page}`}
+                    aria-current={currentPage === page ? 'page' : undefined}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
+              <button
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === pagination.totalPages}
+                className="flex items-center justify-center w-10 h-10 rounded-lg border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                aria-label="Next page"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         )}
         </div>
       </div>

@@ -265,12 +265,26 @@ export async function analyzeResumeApi(payload: {
   return response.data.data;
 }
 
+export interface PaginatedResumesResponse {
+  data: ResumeRecord[];
+  total: number;
+  totalPages: number;
+  page: number;
+  limit: number;
+}
+
 /**
  * GET /resume
  */
-export async function getResumesApi(): Promise<ResumeRecord[]> {
-  const response = await api.get<{ status: string; data: ResumeRecord[] }>('/resume');
-  return response.data.data;
+export async function getResumesApi(
+  page = 1,
+  limit = 9
+): Promise<PaginatedResumesResponse> {
+  const response = await api.get<{ status: string } & PaginatedResumesResponse>(
+    `/resume?page=${page}&limit=${limit}`
+  );
+  const { data, total, totalPages, limit: lim } = response.data;
+  return { data, total, totalPages, page, limit: lim };
 }
 
 /**
