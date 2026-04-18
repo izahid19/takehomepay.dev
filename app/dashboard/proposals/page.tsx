@@ -1,11 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
 import { toast } from 'react-toastify';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { FileText, PlusCircle, Trash2, ArrowRight, Sparkles, Clock, LayoutGrid, List, Search, AlertCircle, ArrowLeft } from 'lucide-react';
+import {
+  FileText, PlusCircle, Trash2, ArrowRight, Sparkles,
+  Clock, LayoutGrid, List, AlertCircle, ArrowLeft,
+  ChevronLeft, ChevronRight,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { proposalModeLabels } from '@/types/proposal';
 import {
@@ -19,38 +23,56 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+const ITEMS_PER_PAGE = 8;
+
+interface PaginationMeta {
+  total: number;
+  totalPages: number;
+  page: number;
+  limit: number;
+}
+
 export default function ProposalsPage() {
-  const [proposals, setProposals] = useState([]);
+  const [proposals, setProposals] = useState<any[]>([]);
+  const [pagination, setPagination] = useState<PaginationMeta>({ total: 0, totalPages: 1, page: 1, limit: ITEMS_PER_PAGE });
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchProposals = async () => {
+  const fetchProposals = useCallback(async (page: number) => {
+    setLoading(true);
     try {
-      const response = await api.get('/proposals');
-      setProposals(response.data.data);
+      const response = await api.get(`/proposals?page=${page}&limit=${ITEMS_PER_PAGE}`);
+      const { data, total, totalPages, limit } = response.data;
+      setProposals(data);
+      setPagination({ total, totalPages, page, limit });
     } catch (err) {
       console.error('Failed to fetch proposals', err);
+      toast.error('Failed to load proposals');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchProposals();
-  }, []);
+    fetchProposals(currentPage);
+  }, [currentPage, fetchProposals]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
     setIsDeleting(true);
     try {
-      console.log('Attempting to delete proposal:', deleteId);
       const response = await api.delete(`/proposals/${deleteId}`);
       if (response.status === 204 || response.data?.status === 'success') {
-        setProposals((prev) => prev.filter((p: any) => p._id !== deleteId));
         toast.success('Proposal deleted successfully');
         setDeleteId(null);
+        // If we deleted the last item on the current page, go back one
+        const isLastOnPage = proposals.length === 1 && currentPage > 1;
+        const nextPage = isLastOnPage ? currentPage - 1 : currentPage;
+        if (isLastOnPage) setCurrentPage(nextPage);
+        else fetchProposals(nextPage);
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || err.message || 'Failed to delete proposal');
@@ -59,13 +81,29 @@ export default function ProposalsPage() {
     }
   };
 
-  // Helper to strip markdown for preview
-  const getCleanSnippet = (text: string) => {
-    return text
-      .replace(/[#*`_~]/g, '') // Remove common markdown chars
-      .replace(/\s+/g, ' ')    // Normalize whitespace
-      .trim();
+  const getCleanSnippet = (text: string) =>
+    text.replace(/[#*`_~]/g, '').replace(/\s+/g, ' ').trim();
+
+  // --- Pagination helpers ---
+  const goToPage = (page: number) => {
+    if (page < 1 || page > pagination.totalPages) return;
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const getPageNumbers = () => {
+    const { totalPages, page } = pagination;
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const pages: (number | '...')[] = [1];
+    if (page > 3) pages.push('...');
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+    if (page < totalPages - 2) pages.push('...');
+    pages.push(totalPages);
+    return pages;
+  };
+
+  const startItem = (currentPage - 1) * ITEMS_PER_PAGE + 1;
+  const endItem = Math.min(currentPage * ITEMS_PER_PAGE, pagination.total);
 
   if (loading) {
     return (
@@ -93,6 +131,7 @@ export default function ProposalsPage() {
         <div className="absolute inset-0 bg-[radial-gradient(#1d1d1d_1px,transparent_1px)] [background-size:24px_24px]" />
       </div>
 
+      {/* Header */}
       <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-4">
           <Link href="/dashboard" className="inline-flex items-center text-sm font-medium text-zinc-400 hover:text-white transition-colors bg-zinc-900/50 hover:bg-zinc-800 border border-zinc-800 rounded-lg px-3 py-1.5 w-fit">
@@ -105,21 +144,26 @@ export default function ProposalsPage() {
             </h1>
             <p className="text-zinc-500 font-medium">
               Manage and view your generated proposal intelligence.
+              {pagination.total > 0 && (
+                <span className="ml-2 text-zinc-600">
+                  — {pagination.total} total
+                </span>
+              )}
             </p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-4">
           {/* View Toggle */}
           <div className="flex bg-zinc-900/50 border border-zinc-800 p-1 rounded-xl backdrop-blur-sm">
-            <button 
+            <button
               onClick={() => setViewMode('card')}
               className={`p-2 rounded-lg transition-all ${viewMode === 'card' ? 'bg-zinc-800 text-emerald-500 shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
               title="Card View"
             >
               <LayoutGrid className="w-5 h-5" />
             </button>
-            <button 
+            <button
               onClick={() => setViewMode('table')}
               className={`p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-zinc-800 text-emerald-500 shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
               title="Table View"
@@ -137,6 +181,7 @@ export default function ProposalsPage() {
         </div>
       </div>
 
+      {/* Empty State */}
       {proposals.length === 0 ? (
         <div className="relative z-10 bg-zinc-900/40 border-2 border-dashed border-zinc-800 rounded-3xl p-16 flex flex-col items-center text-center backdrop-blur-sm">
           <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6">
@@ -151,15 +196,14 @@ export default function ProposalsPage() {
           </Button>
         </div>
       ) : viewMode === 'card' ? (
+        /* Card Grid */
         <div className="relative z-10 grid gap-6 md:grid-cols-2">
           {proposals.map((proposal: any) => (
-            <div 
-              key={proposal._id} 
+            <div
+              key={proposal._id}
               className="group relative bg-[#09090b] border border-zinc-800/80 rounded-2xl overflow-hidden hover:border-emerald-500/30 transition-all duration-300 shadow-2xl hover:shadow-emerald-500/5 hover:-translate-y-1"
             >
-              {/* Card Accent */}
               <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/0 to-transparent group-hover:via-emerald-500/40 transition-all duration-500" />
-              
               <div className="p-7 space-y-6">
                 <div className="flex justify-between items-start gap-4">
                   <div className="space-y-1.5 flex-1 min-w-0">
@@ -190,8 +234,8 @@ export default function ProposalsPage() {
                 </div>
 
                 <div className="flex gap-3 pt-2">
-                  <Button 
-                    className="flex-1 h-11 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-bold rounded-lg border border-zinc-800 hover:border-zinc-700 transition-all group/btn" 
+                  <Button
+                    className="flex-1 h-11 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-bold rounded-lg border border-zinc-800 hover:border-zinc-700 transition-all group/btn"
                     asChild
                   >
                     <Link href={`/dashboard/proposals/${proposal._id}`}>
@@ -199,13 +243,9 @@ export default function ProposalsPage() {
                       <ArrowRight className="ml-2 h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
                     </Link>
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setDeleteId(proposal._id);
-                    }} 
+                  <Button
+                    variant="ghost"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteId(proposal._id); }}
                     className="relative z-20 h-11 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all font-bold flex items-center gap-2 shadow-lg shadow-red-900/20"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -213,8 +253,6 @@ export default function ProposalsPage() {
                   </Button>
                 </div>
               </div>
-
-              {/* Sparkle background element on hover */}
               <div className="absolute bottom-[-10px] right-[-10px] opacity-0 group-hover:opacity-10 transition-opacity pointer-events-none">
                 <Sparkles className="w-24 h-24 text-emerald-500" />
               </div>
@@ -239,7 +277,7 @@ export default function ProposalsPage() {
                 {proposals.map((proposal: any) => (
                   <tr key={proposal._id} className="group hover:bg-emerald-500/[0.02] transition-colors">
                     <td className="px-6 py-5">
-                      <Link 
+                      <Link
                         href={`/dashboard/proposals/${proposal._id}`}
                         className="text-[15px] font-bold text-white hover:text-emerald-400 transition-colors line-clamp-1"
                       >
@@ -264,9 +302,9 @@ export default function ProposalsPage() {
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex justify-end items-center gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           asChild
                           className="h-8 px-3 text-zinc-400 hover:text-emerald-500 hover:bg-emerald-500/10 rounded-lg group/btn"
                         >
@@ -275,14 +313,10 @@ export default function ProposalsPage() {
                             <ArrowRight className="ml-2 h-3.5 w-3.5 group-hover/btn:translate-x-1 transition-transform" />
                           </Link>
                         </Button>
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           size="sm"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setDeleteId(proposal._id);
-                          }} 
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteId(proposal._id); }}
                           className="relative z-10 h-8 px-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all font-bold flex items-center gap-2 shadow-sm shadow-red-900/20"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -297,6 +331,64 @@ export default function ProposalsPage() {
           </div>
         </div>
       )}
+
+      {/* ── Pagination Bar ── */}
+      {pagination.totalPages > 1 && (
+        <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
+          {/* Items counter */}
+          <p className="text-sm text-zinc-500 font-medium">
+            Showing <span className="text-zinc-300 font-bold">{startItem}–{endItem}</span> of{' '}
+            <span className="text-zinc-300 font-bold">{pagination.total}</span> proposals
+          </p>
+
+          {/* Page controls */}
+          <div className="flex items-center gap-1.5">
+            {/* Prev */}
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="flex items-center justify-center w-9 h-9 rounded-lg border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {/* Page numbers */}
+            {getPageNumbers().map((page, idx) =>
+              page === '...' ? (
+                <span key={`ellipsis-${idx}`} className="w-9 h-9 flex items-center justify-center text-zinc-600 text-sm font-bold select-none">
+                  …
+                </span>
+              ) : (
+                <button
+                  key={page}
+                  onClick={() => goToPage(page as number)}
+                  className={`w-9 h-9 rounded-lg text-sm font-bold transition-all border ${
+                    currentPage === page
+                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 shadow-lg shadow-emerald-500/10'
+                      : 'border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'
+                  }`}
+                  aria-label={`Page ${page}`}
+                  aria-current={currentPage === page ? 'page' : undefined}
+                >
+                  {page}
+                </button>
+              )
+            )}
+
+            {/* Next */}
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === pagination.totalPages}
+              className="flex items-center justify-center w-9 h-9 rounded-lg border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              aria-label="Next page"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent className="bg-[#0c0c0e] border-zinc-800 shadow-2xl rounded-2xl max-w-[400px]">
@@ -317,11 +409,8 @@ export default function ProposalsPage() {
             <AlertDialogCancel className="flex-1 h-11 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-bold border-zinc-800 hover:border-zinc-700 m-0">
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={(e) => {
-                e.preventDefault();
-                handleDelete();
-              }}
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleDelete(); }}
               disabled={isDeleting}
               className="flex-1 h-11 bg-red-600 hover:bg-red-500 text-white font-bold border-none transition-all active:scale-95"
             >
