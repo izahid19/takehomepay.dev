@@ -11,7 +11,8 @@ import {
   ResumeRecord,
 } from '@/lib/resumeStudio.api';
 import api from '@/lib/axios';
-import ResumeEditor, { ResumeEditorData } from '@/components/resumestudio/ResumeEditor';
+import ResumeEditor from '@/components/resumestudio/ResumeEditor';
+import { ResumeEditorData } from '@/components/resumestudio/types';
 import { useAuth } from '@/hooks/useAuth';
 
 // New specialized components

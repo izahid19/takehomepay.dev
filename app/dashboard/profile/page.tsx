@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Save, Zap, Crown, User as UserIcon, UploadCloud, FileText, Trash2, Pencil } from 'lucide-react';
+import { Loader2, Save, Zap, Crown, User as UserIcon, UploadCloud, FileText, Trash2, Pencil, Plus, Sparkles } from 'lucide-react';
+
 import { ProfileCompletionBar } from '@/components/ProfileCompletionBar';
 import { MissingFieldsList, ProfileData } from '@/components/MissingFieldsList';
 import { showToast } from '@/lib/toast';
@@ -36,9 +37,13 @@ export default function ProfilePage() {
       bio: '', 
       experience: '', 
       skills: [] as string[],
-      projects: [] as Array<{ title: string; description: string }>
+      projects: [] as Array<{ title: string; description: string }>,
+      careerOpsProfile: ''
     },
+
   });
+
+
 
   const [skillsInput, setSkillsInput] = useState('');
 
@@ -75,9 +80,13 @@ export default function ProfilePage() {
               bio: profile.professionalInfo?.bio || '',
               experience: profile.professionalInfo?.experience || '',
               skills: profile.professionalInfo?.skills || [],
-              projects: cleanProjects
+              projects: cleanProjects,
+              careerOpsProfile: profile.professionalInfo?.careerOpsProfile || ''
             },
+
           };
+
+
           const initialSkills = profile.professionalInfo?.skills?.join(', ') || '';
           
           setFormData(initialData);
@@ -139,7 +148,38 @@ export default function ProfilePage() {
     }
   };
 
+  const handleCreateEmptyResume = async () => {
+    setIsUploadingResume(true);
+    try {
+      const res = await api.post('/resumes', { 
+        profileType: 'My Master Resume',
+        fullName: `${formData.personalInfo.firstName} ${formData.personalInfo.lastName}`.trim(),
+        email: user?.email || '',
+        phone: formData.personalInfo.phone || '',
+        rawText: '# My Resume\n\n## Contact\n- Name: ' + (`${formData.personalInfo.firstName} ${formData.personalInfo.lastName}`.trim() || 'Your Name')
+      });
+      const newResume = res.data.data;
+      
+      // Update profile with the new resume info (minimal)
+      await api.put('/profile', { 
+        resume: { 
+          fileName: 'manual_entry.md',
+          rawText: newResume.rawText,
+          uploadedAt: new Date()
+        } 
+      });
+
+      showToast.success('Created fresh resume template');
+      router.push(`/dashboard/profile/resume/${newResume.id || newResume._id}`);
+    } catch (err: any) {
+      showToast.apiError(err, 'Failed to create resume');
+    } finally {
+      setIsUploadingResume(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
+
     e.preventDefault();
     setLoading(true);
 
@@ -179,8 +219,13 @@ export default function ProfilePage() {
           bio: updatedProfile.professionalInfo?.bio || '',
           experience: updatedProfile.professionalInfo?.experience || '',
           skills: updatedProfile.professionalInfo?.skills || [],
-          projects: cleanProjects
+          projects: cleanProjects,
+          careerOpsProfile: updatedProfile.professionalInfo?.careerOpsProfile || ''
         },
+
+        resume: {
+          rawText: updatedProfile.resume?.rawText || ''
+        }
       };
       const newInitialSkills = updatedProfile.professionalInfo?.skills?.join(', ') || '';
       
@@ -309,121 +354,100 @@ export default function ProfilePage() {
                 />
               </div>
               
-              {/* Resume Upload Section */}
+              {/* Professional Assets Section (Resume & Strategic Profile) */}
               <div className="space-y-4 pt-6 border-t border-border/50">
-                <div>
-                  <Label className="text-base">My Resume</Label>
-                  <p className="text-xs text-muted-foreground mt-1">Upload your resume to share your background with clients.</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-lg font-bold flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-primary" />
+                      Professional Assets
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">Manage your resume source and strategic profile data.</p>
+                  </div>
+                  {profileData?.resume?.rawText && (
+                    <Button 
+                      type="button"
+                      variant="default"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const resumeRes = await api.get('/resumes');
+                          const resumes = resumeRes.data.data;
+                          const masterResume = resumes.find((r: any) => r.profileType === 'My Master Resume') || resumes[0];
+                          if (masterResume) {
+                            router.push(`/dashboard/profile/resume/${masterResume.id || masterResume._id}`);
+                          } else {
+                            showToast.error('No master resume found.');
+                          }
+                        } catch {
+                          showToast.error('Failed to load resume');
+                        }
+                      }}
+                      className="h-9 px-4 text-xs font-bold gap-2 bg-primary hover:bg-primary/90"
+                    >
+                      <Pencil className="w-3.5 h-3.5" /> Edit Resume MD
+                    </Button>
+                  )}
                 </div>
-                
-                <div className="relative">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleResumeUpload}
-                    accept=".pdf,.doc,.docx"
-                    className="hidden"
-                  />
-                  
-                  <AnimatePresence mode="wait">
-                    {isUploadingResume ? (
-                      <motion.div 
-                        key="uploading"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="p-8 border-2 border-dashed border-border/50 rounded-xl flex items-center justify-center flex-col gap-3 bg-muted/20"
+
+                {!profileData?.resume?.rawText ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Option 1: Upload */}
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className="cursor-pointer p-8 border-2 border-dashed border-border/50 rounded-2xl flex items-center justify-center flex-col gap-3 hover:border-primary/50 hover:bg-primary/5 transition-all bg-card/40 group"
+                    >
+                      <div className="p-4 bg-primary/10 rounded-full group-hover:scale-110 transition-transform">
+                        <UploadCloud className="w-8 h-8 text-primary" />
+                      </div>
+                      <div className="text-center">
+                        <p className="font-bold text-foreground">Upload Resume</p>
+                        <p className="text-xs text-muted-foreground mt-1">PDF, DOC, DOCX up to 5MB</p>
+                      </div>
+                    </div>
+
+                    {/* Option 2: Manual */}
+                    <div
+                      onClick={handleCreateEmptyResume}
+                      className="cursor-pointer p-8 border-2 border-dashed border-border/50 rounded-2xl flex items-center justify-center flex-col gap-3 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all bg-card/40 group"
+                    >
+                      <div className="p-4 bg-emerald-500/10 rounded-full group-hover:scale-110 transition-transform">
+                        <Plus className="w-8 h-8 text-emerald-500" />
+                      </div>
+                      <div className="text-center">
+                        <p className="font-bold text-foreground">Add Markdown Manually</p>
+                        <p className="text-xs text-muted-foreground mt-1">Start from a clean template</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-6 border border-primary/20 bg-primary/5 rounded-xl flex items-center justify-between group">
+                    <div className="flex items-center gap-4 overflow-hidden">
+                      <div className="p-3 bg-primary/10 rounded-lg shrink-0">
+                        <FileText className="w-6 h-6 text-primary" />
+                      </div>
+                      <div className="truncate pr-4">
+                        <p className="text-sm font-semibold text-foreground truncate">Master Professional Assets</p>
+                        <p className="text-xs text-primary font-medium">cv.md & profile.md are synced ✓</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Button 
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleResumeDelete}
+                        className="text-red-500 hover:bg-red-500/10 h-9 px-3 text-xs font-bold"
                       >
-                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                        <p className="text-sm font-medium animate-pulse text-muted-foreground">Processing resume with AI...</p>
-                        <div className="w-full max-w-xs h-1.5 bg-muted mt-2 rounded-full overflow-hidden relative">
-                          <motion.div 
-                            className="absolute top-0 left-0 bottom-0 bg-primary"
-                            initial={{ width: "0%" }}
-                            animate={{ width: "100%" }}
-                            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                          />
-                        </div>
-                      </motion.div>
-                    ) : profileData?.resume?.rawText ? (
-                      <motion.div 
-                        key="uploaded"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="p-5 border border-primary/20 bg-primary/5 rounded-xl flex items-center justify-between group transition-all hover:bg-primary/10"
-                      >
-                        <div className="flex items-center gap-4 overflow-hidden">
-                          <div className="p-3 bg-primary/10 rounded-lg shrink-0">
-                            <FileText className="w-6 h-6 text-primary" />
-                          </div>
-                          <div className="truncate pr-4">
-                            <p className="text-sm font-semibold text-foreground truncate">{profileData.resume.fileName}</p>
-                            <p className="text-xs text-primary font-medium">AI Parsed ✓ — Ready for Resume Studio</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <Button 
-                            type="button"
-                            variant="default"
-                            size="sm"
-                            onClick={async () => {
-                              // Find the user's base resume to navigate to the editor
-                              try {
-                                const resumeRes = await api.get('/resumes');
-                                const resumes = resumeRes.data.data;
-                                if (resumes?.length > 0) {
-                                  router.push(`/dashboard/profile/resume/${resumes[0].id || resumes[0]._id}`);
-                                } else {
-                                  showToast.error('No parsed resume found. Please re-upload.');
-                                }
-                              } catch {
-                                showToast.error('Failed to load resume');
-                              }
-                            }}
-                            className="h-9 px-4 text-xs font-medium gap-1.5 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
-                          >
-                            <Pencil className="w-3.5 h-3.5" /> Edit Resume
-                          </Button>
-                          <Button 
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="h-9 px-4 text-xs font-medium"
-                          >
-                            Re-upload
-                          </Button>
-                          <Button 
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            onClick={handleResumeDelete}
-                            className="h-9 w-9 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="idle"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        whileHover={{ scale: 1.01, borderColor: "rgba(var(--primary), 0.5)", backgroundColor: "rgba(var(--primary), 0.02)" }}
-                        whileTap={{ scale: 0.99 }}
-                        onClick={() => fileInputRef.current?.click()}
-                        className="cursor-pointer p-8 border-2 border-dashed border-border/50 rounded-xl flex items-center justify-center flex-col gap-2 transition-all hover:border-primary/50 group bg-card/50"
-                      >
-                        <div className="p-4 rounded-full bg-muted group-hover:bg-primary/10 transition-colors">
-                          <UploadCloud className="w-8 h-8 text-muted-foreground group-hover:text-primary transition-colors" />
-                        </div>
-                        <p className="font-semibold text-foreground mt-2">Click to upload your resume</p>
-                        <p className="text-xs text-muted-foreground">PDF, DOC, DOCX up to 5MB</p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
+
+
+
 
               {/* Social Links Section */}
               <div className="space-y-4 pt-6 border-t border-border/50">
