@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, Sparkles, BarChart3, FileText, Loader2, AlertCircle,
+  ArrowLeft, Sparkles, FileText, Loader2, AlertCircle,
   CheckCircle2, Download, Trash2, ChevronRight, Zap, Target, Clock, Mail,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -13,7 +13,6 @@ import {
   getResumeByIdApi,
   downloadResumeApi,
   deleteResumeApi,
-  analyzeForProjectApi,
   generateResumeForProjectApi,
   ResumeRecord,
 } from '@/lib/resumeStudio.api';
@@ -21,19 +20,7 @@ import api from '@/lib/axios';
 import { useAuth } from '@/hooks/useAuth';
 
 // ─── Generating overlay ────────────────────────
-function GeneratingOverlay({
-  mode,
-}: {
-  mode: 'analysis' | 'resume';
-}) {
-  const analysisSteps = [
-    'Reading your resume...',
-    'Running deep analysis with DeepSeek R1...',
-    'Extracting ATS keywords...',
-    'Scoring your resume against the job...',
-    'Generating improvement suggestions...',
-    'Finalizing analysis report...',
-  ];
+function GeneratingOverlay() {
   const resumeSteps = [
     'Reading your resume...',
     'Analyzing job requirements...',
@@ -43,16 +30,12 @@ function GeneratingOverlay({
     'Finalizing your tailored resume...',
   ];
 
-  const steps = mode === 'analysis' ? analysisSteps : resumeSteps;
-  const title = mode === 'analysis' ? 'Analyzing Resume' : 'Generating ATS Resume';
-  const accent = mode === 'analysis' ? 'blue' : 'emerald';
-
   const [stepIdx, setStepIdx] = React.useState(0);
 
   React.useEffect(() => {
-    const id = setInterval(() => setStepIdx((i) => Math.min(i + 1, steps.length - 1)), 12000);
+    const id = setInterval(() => setStepIdx((i) => Math.min(i + 1, resumeSteps.length - 1)), 12000);
     return () => clearInterval(id);
-  }, [steps.length]);
+  }, [resumeSteps.length]);
 
   return (
     <div className="relative min-h-full pb-20 pt-16 flex flex-col items-center justify-center">
@@ -64,30 +47,18 @@ function GeneratingOverlay({
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className={cn(
-          "relative z-10 bg-[#0c0c0e] border rounded-3xl p-12 max-w-xl w-full flex flex-col items-center gap-8 text-center shadow-2xl",
-          accent === 'blue' ? 'border-blue-500/20' : 'border-emerald-500/20'
-        )}
+        className="relative z-10 bg-[#0c0c0e] border border-emerald-500/20 rounded-3xl p-12 max-w-xl w-full flex flex-col items-center gap-8 text-center shadow-2xl"
       >
         <div className="relative w-20 h-20">
           <div className="absolute inset-0 rounded-full border-4 border-zinc-800" />
-          <div className={cn(
-            'absolute inset-0 rounded-full border-4 animate-spin',
-            accent === 'blue'
-              ? 'border-t-blue-500 border-r-blue-500/20 border-b-transparent border-l-transparent'
-              : 'border-t-emerald-500 border-r-emerald-500/20 border-b-transparent border-l-transparent'
-          )} />
+          <div className="absolute inset-0 rounded-full border-4 animate-spin border-t-emerald-500 border-r-emerald-500/20 border-b-transparent border-l-transparent" />
           <div className="absolute inset-[6px] rounded-full bg-zinc-900 flex items-center justify-center">
-            {mode === 'analysis' ? (
-              <BarChart3 className="w-7 h-7 text-blue-400 animate-pulse" />
-            ) : (
-              <Sparkles className="w-7 h-7 text-emerald-400 animate-pulse" />
-            )}
+            <Sparkles className="w-7 h-7 text-emerald-400 animate-pulse" />
           </div>
         </div>
 
         <div className="space-y-2">
-          <h3 className="text-xl font-bold text-white">{title}</h3>
+          <h3 className="text-xl font-bold text-white">Generating ATS Resume</h3>
           <AnimatePresence mode="wait">
             <motion.p
               key={stepIdx}
@@ -95,12 +66,9 @@ function GeneratingOverlay({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.25 }}
-              className={cn(
-                'text-sm font-medium',
-                accent === 'blue' ? 'text-blue-400' : 'text-emerald-400'
-              )}
+              className="text-sm font-medium text-emerald-400"
             >
-              {steps[stepIdx]}
+              {resumeSteps[stepIdx]}
             </motion.p>
           </AnimatePresence>
           <p className="text-xs text-zinc-600">This usually takes 1–2 minutes with the reasoning model</p>
@@ -108,14 +76,9 @@ function GeneratingOverlay({
 
         <div className="w-full bg-zinc-800 rounded-full h-1.5">
           <motion.div
-            className={cn(
-              'h-full rounded-full',
-              accent === 'blue'
-                ? 'bg-gradient-to-r from-blue-500 to-cyan-400'
-                : 'bg-gradient-to-r from-emerald-500 to-teal-400'
-            )}
+            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400"
             initial={{ width: '5%' }}
-            animate={{ width: `${((stepIdx + 1) / steps.length) * 100}%` }}
+            animate={{ width: `${((stepIdx + 1) / resumeSteps.length) * 100}%` }}
             transition={{ duration: 0.6 }}
           />
         </div>
@@ -170,24 +133,12 @@ export default function ResumeProjectPage() {
 
   const hasResume = !!profileData?.resume?.rawText;
 
-  // Derived state for each card
-  const analysisStatus = record?.analysisStatus || 'IDLE';
   const resumeStatus = record?.resumeStatus || 'IDLE';
-  const hasAnalysis = !!record?.analysis;
   const hasGeneratedResume = !!record?.newResumeContent;
   const emailDraftStatus = record?.emailDraftStatus || 'IDLE';
   const hasEmailDraft = !!record?.emailDraft;
   const coverLetterStatus = record?.coverLetterStatus || 'IDLE';
   const hasCoverLetter = !!record?.coverLetter;
-
-  const handleAnalyze = () => {
-    if (!hasResume) {
-      setError('Please upload a resume in your profile first.');
-      return;
-    }
-    // Navigate to analysis page — it handles generation itself
-    router.push(`/dashboard/resumestudio/${id}/analysis`);
-  };
 
   const handleGenerateResume = () => {
     if (!hasResume) {
@@ -254,7 +205,7 @@ export default function ResumeProjectPage() {
   });
 
   if (generatingMode) {
-    return <GeneratingOverlay mode={generatingMode} />;
+    return <GeneratingOverlay />;
   }
 
   return (
@@ -391,75 +342,13 @@ export default function ResumeProjectPage() {
             </motion.div>
           )}
 
-          {/* ══════ Two Feature Cards ══════ */}
+          {/* ══════ Feature Cards ══════ */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="grid grid-cols-1 md:grid-cols-2 gap-5"
           >
-            {/* ── ANALYSIS CARD ── */}
-            <div className={cn(
-              'bg-card/60 backdrop-blur-sm border rounded-2xl p-5 shadow-xl transition-colors group flex flex-col gap-4',
-              hasAnalysis ? 'border-blue-500/20 hover:border-blue-500/40' : 'border-border hover:border-zinc-700'
-            )}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2.5 bg-zinc-900 rounded-xl group-hover:bg-blue-500/10 transition-colors shrink-0">
-                    <BarChart3 className="w-5 h-5 text-blue-500" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-white truncate">Resume Analysis</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {hasAnalysis && record.analysis && (
-                        <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">
-                          {record.analysis.score}% Match
-                        </span>
-                      )}
-                      {analysisStatus === 'FAILED' && (
-                        <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider">Failed</span>
-                      )}
-                      {!hasAnalysis && analysisStatus !== 'FAILED' && (
-                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Not Generated</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-xs text-zinc-500 leading-relaxed font-medium">
-                AI-powered match score, skill gap analysis, strengths, and actionable improvements tailored to this job description.
-              </p>
-
-              <div className="flex gap-2 mt-auto">
-                {hasAnalysis ? (
-                  <>
-                    <Link
-                      href={`/dashboard/resumestudio/${id}/analysis`}
-                      className="w-full flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 rounded-xl transition-all"
-                    >
-                      <BarChart3 className="w-3.5 h-3.5" />
-                      View Report
-                    </Link>
-                  </>
-                ) : (
-                  <button
-                    onClick={handleAnalyze}
-                    disabled={!hasResume}
-                    className={cn(
-                      'w-full flex items-center justify-center gap-1.5 py-2 flex-1 text-[11px] sm:text-xs font-bold rounded-xl transition-all',
-                      hasResume
-                        ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:brightness-105 shadow-lg shadow-blue-500/20'
-                        : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
-                    )}
-                  >
-                    <Zap className="w-3.5 h-3.5" />
-                    Generate Analysis
-                  </button>
-                )}
-              </div>
-            </div>
-
             {/* ── ATS RESUME CARD ── */}
             <div className={cn(
               'bg-card/60 backdrop-blur-sm border rounded-2xl p-5 shadow-xl transition-colors group flex flex-col gap-4',
