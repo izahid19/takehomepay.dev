@@ -8,6 +8,7 @@ import {
   ArrowLeft, Save, Download, Loader2, RotateCcw, FileText, Eye, Edit, ChevronDown, ChevronUp, Plus, Trash2, GripVertical
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { showToast } from '@/lib/toast';
 
 import { ResumeEditorData } from './types';
 import { PersonalDetails } from './editor/PersonalDetails';
@@ -55,7 +56,30 @@ export default function ResumeEditor({
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [sectionSnapshot, setSectionSnapshot] = useState<string | null>(null);
+
+  const handleEditSection = (section: string) => {
+    setSectionSnapshot(JSON.stringify(data));
+    setActiveSection(section);
+  };
+
+  const handleCancelSection = () => {
+    if (sectionSnapshot) {
+      setData(JSON.parse(sectionSnapshot));
+    }
+    setActiveSection(null);
+    setSectionSnapshot(null);
+  };
+
+  const handleDoneSection = () => {
+    showToast.success('Saved successfully');
+    setActiveSection(null);
+    setSectionSnapshot(null);
+  };
+
+  const currentDataStr = JSON.stringify(data);
+  const sectionHasChanges = activeSection !== null && sectionSnapshot !== null && currentDataStr !== sectionSnapshot;
   const previewRef = useRef<HTMLIFrameElement>(null);
 
   // Sync when parent changes initial data
@@ -204,12 +228,72 @@ export default function ResumeEditor({
         {!showPreview && (
           <div className="flex-1 overflow-y-auto p-3">
             <div className="max-w-5xl mx-auto w-full">
-              <PersonalDetails data={data} onChange={(d) => setData({ ...data, ...d })} />
-              <SummarySection data={data} onChange={(d) => setData({ ...data, ...d })} />
-              <SkillsSection data={data} onChange={(d) => setData({ ...data, ...d })} />
-              <ExperienceSection data={data} onChange={(d) => setData({ ...data, ...d })} />
-              <EducationSection data={data} onChange={(d) => setData({ ...data, ...d })} />
-              <ProjectsSection data={data} onChange={(d) => setData({ ...data, ...d })} />
+              {(!activeSection || activeSection === 'personal') && (
+                <PersonalDetails 
+                  data={data} 
+                  onChange={(d) => setData({ ...data, ...d })} 
+                  isEditing={activeSection === 'personal'}
+                  onEdit={() => handleEditSection('personal')}
+                  onDone={handleDoneSection}
+                  onCancel={handleCancelSection}
+                  hasChanges={sectionHasChanges}
+                />
+              )}
+              {(!activeSection || activeSection === 'summary') && (
+                <SummarySection 
+                  data={data} 
+                  onChange={(d) => setData({ ...data, ...d })} 
+                  isEditing={activeSection === 'summary'}
+                  onEdit={() => handleEditSection('summary')}
+                  onDone={handleDoneSection}
+                  onCancel={handleCancelSection}
+                  hasChanges={sectionHasChanges}
+                />
+              )}
+              {(!activeSection || activeSection === 'skills') && (
+                <SkillsSection 
+                  data={data} 
+                  onChange={(d) => setData({ ...data, ...d })} 
+                  isEditing={activeSection === 'skills'}
+                  onEdit={() => handleEditSection('skills')}
+                  onDone={handleDoneSection}
+                  onCancel={handleCancelSection}
+                  hasChanges={sectionHasChanges}
+                />
+              )}
+              {(!activeSection || activeSection === 'experience') && (
+                <ExperienceSection 
+                  data={data} 
+                  onChange={(d) => setData({ ...data, ...d })} 
+                  isEditing={activeSection === 'experience'}
+                  onEdit={() => handleEditSection('experience')}
+                  onDone={handleDoneSection}
+                  onCancel={handleCancelSection}
+                  hasChanges={sectionHasChanges}
+                />
+              )}
+              {(!activeSection || activeSection === 'education') && (
+                <EducationSection 
+                  data={data} 
+                  onChange={(d) => setData({ ...data, ...d })} 
+                  isEditing={activeSection === 'education'}
+                  onEdit={() => handleEditSection('education')}
+                  onDone={handleDoneSection}
+                  onCancel={handleCancelSection}
+                  hasChanges={sectionHasChanges}
+                />
+              )}
+              {(!activeSection || activeSection === 'projects') && (
+                <ProjectsSection 
+                  data={data} 
+                  onChange={(d) => setData({ ...data, ...d })} 
+                  isEditing={activeSection === 'projects'}
+                  onEdit={() => handleEditSection('projects')}
+                  onDone={handleDoneSection}
+                  onCancel={handleCancelSection}
+                  hasChanges={sectionHasChanges}
+                />
+              )}
             </div>
           </div>
         )}

@@ -7,10 +7,25 @@ import { RichTextEditor } from './RichTextEditor';
 interface Props {
   data: ResumeEditorData;
   onChange: (data: Partial<ResumeEditorData>) => void;
+  isEditing?: boolean;
+  onEdit?: () => void;
+  onDone?: () => void;
+  onCancel?: () => void;
+  hasChanges?: boolean;
 }
 
-export function SummarySection({ data, onChange }: Props) {
-  const [isEditing, setIsEditing] = useState(false);
+export function SummarySection({ data, onChange, isEditing: propsIsEditing, onEdit, onDone, onCancel, hasChanges }: Props) {
+  const [localIsEditing, setLocalIsEditing] = useState(false);
+  const isEditing = propsIsEditing !== undefined ? propsIsEditing : localIsEditing;
+  const setIsEditing = (val: boolean) => {
+    if (val) {
+      onEdit?.();
+      setLocalIsEditing(true);
+    } else {
+      onDone?.();
+      setLocalIsEditing(false);
+    }
+  };
 
   if (isEditing) {
     return (
@@ -45,9 +60,17 @@ export function SummarySection({ data, onChange }: Props) {
             </Button>
           </div> */}
           
-          <div className="pt-4 flex justify-center border-t border-border/50 mt-4">
+          <div className="pt-4 flex justify-center gap-3 border-t border-border/50 mt-4">
             <Button 
-              className="w-full sm:w-auto min-w-[200px] h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base shadow-sm transition-all"
+              variant="outline"
+              className="w-full sm:w-auto min-w-[120px] h-12 rounded-xl text-base shadow-sm transition-all"
+              onClick={() => onCancel ? onCancel() : onDone?.()}
+            >
+              Close
+            </Button>
+            <Button 
+              disabled={hasChanges === false}
+              className="w-full sm:w-auto min-w-[120px] h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base shadow-sm transition-all"
               onClick={() => setIsEditing(false)}
             >
               <Check className="w-5 h-5 mr-2" /> Done
