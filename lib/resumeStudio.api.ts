@@ -155,6 +155,32 @@ export interface CoverLetter {
   signature: string;
 }
 
+// ── Interview Prep Types ──────────────────────
+
+export interface InterviewPrepReport {
+  reportMd: string;
+  model: string;
+  generatedAt: string;
+}
+// ── LinkedIn Outreach Types ────────────────
+
+export type ContactType = 'recruiter' | 'hiring_manager' | 'peer' | 'interviewer';
+
+export interface OutreachMessage {
+  contactType: ContactType;
+  contactName: string;
+  message: string;
+  charCount: number;
+  reasoning: string;
+}
+
+export interface LinkedinOutreach {
+  messages: OutreachMessage[];
+  model: string;
+  generatedAt: string;
+}
+
+
 export interface ResumeRecord {
   _id: string;
   user: string;
@@ -165,14 +191,54 @@ export interface ResumeRecord {
   analysis: ResumeAnalysis | null;
   emailDraft: EmailDraft | null;
   coverLetter: CoverLetter | null;
+  interviewPrep: InterviewPrepReport | null;
+  linkedinOutreach: LinkedinOutreach | null;
+  followUp: FollowUpTracker | null;
   status: 'SAVED' | 'GENERATING' | 'SUCCESS' | 'FAILED';
   analysisStatus: 'IDLE' | 'GENERATING' | 'SUCCESS' | 'FAILED';
   resumeStatus: 'IDLE' | 'GENERATING' | 'SUCCESS' | 'FAILED';
   emailDraftStatus: 'IDLE' | 'GENERATING' | 'SUCCESS' | 'FAILED';
   coverLetterStatus: 'IDLE' | 'GENERATING' | 'SUCCESS' | 'FAILED';
+  interviewPrepStatus: 'IDLE' | 'GENERATING' | 'SUCCESS' | 'FAILED';
+  linkedinOutreachStatus: 'IDLE' | 'GENERATING' | 'SUCCESS' | 'FAILED';
+  followUpStatus: 'IDLE' | 'GENERATING' | 'SUCCESS' | 'FAILED';
   error: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+// ── Follow-up Types ─────────────────────
+
+export type ApplicationStatus = 'applied' | 'responded' | 'interview' | 'offer' | 'discarded' | 'cold';
+export type FollowUpChannel = 'email' | 'linkedin' | 'other';
+
+export interface FollowUpEntry {
+  _id: string;
+  sentAt: string;
+  channel: FollowUpChannel;
+  contact: string;
+  notes: string;
+  draft: string;
+}
+
+export interface FollowUpTracker {
+  applicationStatus: ApplicationStatus;
+  appliedAt: string;
+  contactName: string;
+  contactEmail: string;
+  followUps: FollowUpEntry[];
+  lastDraft: string;
+  lastDraftChannel: 'email' | 'linkedin';
+  generatedAt: string | null;
+}
+
+export interface FollowUpMeta {
+  urgency: 'urgent' | 'overdue' | 'waiting' | 'cold';
+  daysSinceApplication: number;
+  nextFollowUpIn: number;
+  channel: 'email' | 'linkedin';
+  subject?: string;
+  reasoning: string;
 }
 
 /**
@@ -352,6 +418,79 @@ export async function generateCoverLetterApi(
     `/resume/${id}/generate-coverletter`,
     { resumeText },
     { timeout: 120_000 }
+  );
+  return response.data.data;
+}
+
+/**
+ * POST /resume/:id/generate-interviewprep
+ * Generates a structured interview prep report. Costs 2 credits.
+ */
+export async function generateInterviewPrepApi(
+  id: string,
+  resumeText?: string,
+  model: 'pitchdown-fast' | 'pitchdown-pro' | 'pitchdown-premium-lite' = 'pitchdown-fast',
+  regenerate = false
+): Promise<ResumeRecord> {
+  const response = await api.post<{ status: string; data: ResumeRecord }>(
+    `/resume/${id}/generate-interviewprep`,
+    { resumeText, model, regenerate },
+    { timeout: 200_000 }
+  );
+  return response.data.data;
+}
+
+export async function generateOutreachApi(
+  id: string,
+  contactTypes: ContactType[] = ['recruiter', 'hiring_manager', 'peer'],
+  interviewDate?: string,
+  regenerate = false,
+  resumeText?: string
+): Promise<ResumeRecord> {
+  const response = await api.post<{ status: string; data: ResumeRecord }>(
+    `/resume/${id}/generate-outreach`,
+    { contactTypes, interviewDate, regenerate, resumeText },
+    { timeout: 90_000 }
+  );
+  return response.data.data;
+}
+
+export async function generateFollowUpApi(
+  id: string,
+  payload: {
+    channel?: 'email' | 'linkedin';
+    applicationStatus?: ApplicationStatus;
+    appliedAt?: string;
+    contactName?: string;
+    contactEmail?: string;
+    interviewDate?: string;
+    resumeText?: string;
+  }
+): Promise<{ record: ResumeRecord; meta: FollowUpMeta }> {
+  const response = await api.post<{ status: string; data: ResumeRecord; meta: FollowUpMeta }>(
+    `/resume/${id}/generate-followup`,
+    payload,
+    { timeout: 90_000 }
+  );
+  return { record: response.data.data, meta: response.data.meta };
+}
+
+export async function updateFollowUpApi(
+  id: string,
+  payload: {
+    action: 'record_sent' | 'update_status' | 'set_contact';
+    applicationStatus?: ApplicationStatus;
+    appliedAt?: string;
+    contactName?: string;
+    contactEmail?: string;
+    channel?: 'email' | 'linkedin';
+    notes?: string;
+    draftUsed?: string;
+  }
+): Promise<ResumeRecord> {
+  const response = await api.patch<{ status: string; data: ResumeRecord }>(
+    `/resume/${id}/followup`,
+    payload
   );
   return response.data.data;
 }

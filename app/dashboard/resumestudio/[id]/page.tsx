@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Sparkles, FileText, Loader2, AlertCircle,
-  CheckCircle2, Download, Trash2, ChevronRight, Zap, Target, Clock, Mail,
+  CheckCircle2, Download, Trash2, ChevronRight, Zap, Target, Clock, Mail, BrainCircuit, Linkedin,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -139,6 +139,14 @@ export default function ResumeProjectPage() {
   const hasEmailDraft = !!record?.emailDraft;
   const coverLetterStatus = record?.coverLetterStatus || 'IDLE';
   const hasCoverLetter = !!record?.coverLetter;
+  const interviewPrepStatus = record?.interviewPrepStatus || 'IDLE';
+  const hasInterviewPrep = !!record?.interviewPrep;
+  const linkedinOutreachStatus = record?.linkedinOutreachStatus || 'IDLE';
+  const hasLinkedinOutreach = (record?.linkedinOutreach?.messages?.length ?? 0) > 0;
+  const followUpStatus = record?.followUpStatus || 'IDLE';
+  const hasFollowUp = !!record?.followUp;
+  const followUpSentCount = record?.followUp?.followUps?.length ?? 0;
+  const followUpAppStatus = record?.followUp?.applicationStatus || 'applied';
 
   const handleGenerateResume = () => {
     if (!hasResume) {
@@ -555,6 +563,207 @@ export default function ResumeProjectPage() {
                 )}
               </div>
             </div>
+
+            {/* ── INTERVIEW PREP CARD ── */}
+            <div className={cn(
+              'bg-card/60 backdrop-blur-sm border rounded-2xl p-5 shadow-xl transition-colors group flex flex-col gap-4',
+              hasInterviewPrep ? 'border-teal-500/20 hover:border-teal-500/40' : 'border-border hover:border-zinc-700'
+            )}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2.5 bg-zinc-900 rounded-xl group-hover:bg-teal-500/10 transition-colors shrink-0">
+                    <BrainCircuit className="w-5 h-5 text-teal-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white truncate">Interview Prep</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {hasInterviewPrep && (
+                        <span className="text-[10px] font-bold text-teal-400 uppercase tracking-wider">Ready</span>
+                      )}
+                      {interviewPrepStatus === 'FAILED' && (
+                        <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider">Failed</span>
+                      )}
+                      {!hasInterviewPrep && interviewPrepStatus !== 'FAILED' && (
+                        <span className={cn(
+                          'text-[10px] font-bold uppercase tracking-wider',
+                          userCredits >= 1 ? 'text-zinc-500' : 'text-red-400'
+                        )}>
+                          🪙 from 1 credit
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-zinc-500 leading-relaxed font-medium">
+                AI-generated interview intelligence — rounds, likely questions, story mapping, and company signals.
+              </p>
+
+              <div className="flex gap-2 mt-auto">
+                {hasInterviewPrep ? (
+                  <Link
+                    href={`/dashboard/resumestudio/${id}/interview-prep`}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 rounded-xl transition-all"
+                  >
+                    <BrainCircuit className="w-3.5 h-3.5" />
+                    View Prep Report
+                  </Link>
+                ) : (
+                  userCredits >= 1 ? (
+                    <Link
+                      href={`/dashboard/resumestudio/${id}/interview-prep`}
+                      className={cn(
+                        'w-full flex items-center justify-center gap-1.5 py-2 flex-1 text-[11px] sm:text-xs font-bold rounded-xl transition-all',
+                        'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-lg shadow-teal-500/20 hover:brightness-105'
+                      )}
+                    >
+                      <BrainCircuit className="w-3.5 h-3.5" />
+                      Generate Prep Report
+                    </Link>
+                  ) : (
+                    <button
+                      disabled
+                      className="w-full flex items-center justify-center gap-1.5 py-2 flex-1 text-[11px] sm:text-xs font-bold rounded-xl bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700 uppercase tracking-wider"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-zinc-600" />
+                      Insufficient Credits
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* ── LINKEDIN OUTREACH CARD ── */}
+            <div
+              className={cn(
+                'bg-card/60 backdrop-blur-sm border rounded-2xl p-5 shadow-xl transition-colors group flex flex-col gap-4',
+                hasLinkedinOutreach ? 'border-blue-500/20 hover:border-blue-500/40' : 'border-border hover:border-zinc-700'
+              )}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2.5 bg-zinc-900 rounded-xl group-hover:bg-blue-500/10 transition-colors shrink-0">
+                    <Linkedin className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white truncate">LinkedIn Outreach</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {hasLinkedinOutreach && (
+                        <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Ready</span>
+                      )}
+                      {linkedinOutreachStatus === 'FAILED' && (
+                        <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider">Failed</span>
+                      )}
+                      {!hasLinkedinOutreach && linkedinOutreachStatus !== 'FAILED' && (
+                        <span className={cn(
+                          'text-[10px] font-bold uppercase tracking-wider',
+                          userCredits >= 1 ? 'text-zinc-500' : 'text-red-400'
+                        )}>
+                          🪙 1 credit
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-zinc-500 leading-relaxed font-medium">
+                3-sentence LinkedIn messages (≤300 chars) for recruiter, hiring manager, peer, and interviewer.
+              </p>
+
+              <div className="flex gap-2 mt-auto">
+                {hasLinkedinOutreach ? (
+                  <Link
+                    href={`/dashboard/resumestudio/${id}/outreach`}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 text-[11px] sm:text-xs font-bold text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 rounded-xl transition-all"
+                  >
+                    <Linkedin className="w-3.5 h-3.5" />
+                    View Messages
+                  </Link>
+                ) : (
+                  userCredits >= 1 ? (
+                    <Link
+                      href={`/dashboard/resumestudio/${id}/outreach`}
+                      className={cn(
+                        'w-full flex items-center justify-center gap-1.5 py-2 flex-1 text-[11px] sm:text-xs font-bold rounded-xl transition-all',
+                        'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/20 hover:brightness-105'
+                      )}
+                    >
+                      <Linkedin className="w-3.5 h-3.5" />
+                      Generate Outreach
+                    </Link>
+                  ) : (
+                    <button
+                      disabled
+                      className="w-full flex items-center justify-center gap-1.5 py-2 flex-1 text-[11px] sm:text-xs font-bold rounded-xl bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700 uppercase tracking-wider"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-zinc-600" />
+                      Insufficient Credits
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* ── FOLLOW-UP TRACKER CARD ── */}
+            <div
+              className={cn(
+                'bg-card/60 backdrop-blur-sm border rounded-2xl p-5 shadow-xl transition-colors group flex flex-col gap-4',
+                hasFollowUp ? 'border-emerald-500/20 hover:border-emerald-500/40' : 'border-border hover:border-zinc-700'
+              )}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2.5 bg-zinc-900 rounded-xl group-hover:bg-emerald-500/10 transition-colors shrink-0">
+                    <Clock className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white truncate">Follow-up Tracker</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {hasFollowUp && (
+                        <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+                          {followUpSentCount > 0 ? `${followUpSentCount} sent` : followUpAppStatus}
+                        </span>
+                      )}
+                      {followUpStatus === 'FAILED' && (
+                        <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider">Failed</span>
+                      )}
+                      {!hasFollowUp && followUpStatus !== 'FAILED' && (
+                        <span className={cn(
+                          'text-[10px] font-bold uppercase tracking-wider',
+                          userCredits >= 1 ? 'text-zinc-500' : 'text-red-400'
+                        )}>
+                          🪙 1 credit
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-zinc-500 leading-relaxed font-medium">
+                Cadence-aware follow-up drafts — email or LinkedIn. Never miss the right moment to reach back.
+              </p>
+
+              <div className="flex gap-2 mt-auto">
+                <Link
+                  href={`/dashboard/resumestudio/${id}/followup`}
+                  className={cn(
+                    'w-full flex items-center justify-center gap-1.5 py-2 flex-1 text-[11px] sm:text-xs font-bold rounded-xl transition-all',
+                    hasFollowUp
+                      ? 'text-zinc-300 border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800'
+                      : userCredits >= 1
+                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20 hover:brightness-105'
+                        : 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700'
+                  )}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  {hasFollowUp ? 'View Follow-ups' : 'Track Follow-up'}
+                </Link>
+              </div>
+            </div>
+
           </motion.div>
 
           {/* Info note */}
