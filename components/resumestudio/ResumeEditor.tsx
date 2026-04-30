@@ -365,11 +365,14 @@ export function generatePreviewHtml(data: ResumeEditorData): string {
   if (links?.custom) contactParts.push(`<a href="${links.custom}" target="_blank">Website</a>`);
   const contactHTML = contactParts.join('\n      <span class="sep">&#9830;</span>\n      ');
 
-  const skillGroups = [
-    { label: 'AI Tools', key: 'aiTools' }, { label: 'Backend', key: 'backend' }, { label: 'Frontend', key: 'frontend' },
-    { label: 'Databases', key: 'databases' }, { label: 'Dev Ops', key: 'devOpsAndTools' }, { label: 'Languages', key: 'programmingLanguages' }
-  ];
-  const skillsHTML = skillGroups.filter(g => technicalSkills?.[g.key]?.length).map(g => `<div class="skill-row"><b>${g.label}:</b> ${(technicalSkills[g.key] ?? []).join(', ')}</div>`).join('\n    ');
+  const formatSkillLabel = (key: string) => {
+    const spaced = key.replace(/([A-Z])/g, ' $1').trim();
+    return spaced.replace(/\b\w/g, c => c.toUpperCase());
+  };
+  const skillsHTML = Object.entries(technicalSkills || {})
+    .filter(([_, arr]) => arr?.length)
+    .map(([key, arr]) => `<div class="skill-row"><b>${formatSkillLabel(key)}:</b> ${(arr ?? []).join(', ')}</div>`)
+    .join('\n    ');
 
   const experienceHTML = (experience ?? []).map(exp => `
   <div class="exp-block">

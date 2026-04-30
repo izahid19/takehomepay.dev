@@ -39,9 +39,9 @@ export function SkillsSection({ data, onChange, isEditing: propsIsEditing, onEdi
   };
 
   const handleSkillsChange = (html: string) => {
-    // Basic HTML to text conversion for parsing
+    // Basic HTML to text conversion for parsing, preserving newlines
     const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
+    tempDiv.innerHTML = html.replace(/<\/p>/gi, '\n').replace(/<br\s*\/?>/gi, '\n');
     const text = tempDiv.innerText || tempDiv.textContent || '';
     
     const lines = text.split('\n').filter(line => line.trim());
@@ -49,7 +49,8 @@ export function SkillsSection({ data, onChange, isEditing: propsIsEditing, onEdi
     
     lines.forEach(line => {
       if (line.includes(':')) {
-        const [catStr, skillsStr] = line.split(':');
+        const [catStr, ...skillsStrs] = line.split(':');
+        const skillsStr = skillsStrs.join(':');
         const cat = catStr.trim().toLowerCase().replace(/\s+(.)/g, (_, c) => c.toUpperCase());
         newSkills[cat] = skillsStr.split(',').map(s => s.trim()).filter(Boolean);
       }
@@ -98,7 +99,8 @@ export function SkillsSection({ data, onChange, isEditing: propsIsEditing, onEdi
     );
   }
 
-  const hasSkills = Object.keys(data.technicalSkills || {}).length > 0;
+  const nonEmptySkills = Object.entries(data.technicalSkills || {}).filter(([_, v]) => v && v.length > 0);
+  const hasSkills = nonEmptySkills.length > 0;
 
   return (
     <div className="bg-card rounded-2xl shadow-sm border border-border p-6 mb-6 relative group transition-all hover:shadow-md">
@@ -119,7 +121,7 @@ export function SkillsSection({ data, onChange, isEditing: propsIsEditing, onEdi
       
       {hasSkills && (
         <div className="space-y-3">
-          {Object.entries(data.technicalSkills).map(([cat, skills], idx) => (
+          {nonEmptySkills.map(([cat, skills], idx) => (
             <div key={idx} className="text-sm">
               <span className="font-bold text-foreground/90 capitalize mr-2">
                 {cat.replace(/([A-Z])/g, ' $1').trim()}:

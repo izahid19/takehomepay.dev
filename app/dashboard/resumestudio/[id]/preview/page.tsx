@@ -18,16 +18,18 @@ function ResumeRenderer({ content }: { content: ResumeContent }) {
     professionalSummary, experience = [], projects = [], education, technicalSkills = {},
   } = content;
 
-  const skillGroups = [
-    { label: 'Languages', arr: technicalSkills.programmingLanguages },
-    { label: 'Frontend',  arr: technicalSkills.frontend },
-    { label: 'Backend',   arr: technicalSkills.backend },
-    { label: 'Databases', arr: technicalSkills.databases },
-    { label: 'Architecture', arr: technicalSkills.architecture },
-    { label: 'DevOps & Tools', arr: technicalSkills.devOpsAndTools },
-    { label: 'Services',  arr: technicalSkills.middlewareAndServices },
-    { label: 'AI Tools',  arr: technicalSkills.aiTools },
-  ].filter((g) => g.arr?.length);
+  const formatLabel = (key: string) => {
+    const spaced = key.replace(/([A-Z])/g, ' $1').trim();
+    // Capitalize first letter of each word to mimic CSS 'capitalize' used in the editor
+    return spaced.replace(/\b\w/g, c => c.toUpperCase());
+  };
+
+  const skillGroups = Object.entries(technicalSkills || {})
+    .filter(([_, arr]) => arr && arr.length > 0)
+    .map(([key, arr]) => ({
+      label: formatLabel(key),
+      arr: arr as string[],
+    }));
 
   return (
     <div className="bg-white text-[#1a1a1a] rounded-2xl overflow-hidden shadow-2xl">
